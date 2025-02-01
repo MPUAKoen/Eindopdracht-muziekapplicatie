@@ -1,0 +1,142 @@
+body{
+    background-color: #f4f4f4;
+    margin:0;
+}
+.sidebar ul {
+    list-style-type: none;
+    padding: 0;
+    margin-top: 20px;     /* Spacing from top */
+}
+
+.sidebar ul li {
+    margin: 15px 0;
+}
+
+.sidebar ul li a {
+    color: white;
+    text-decoration: none;
+    font-size: 18px;
+    display: block;
+    padding: 10px;
+}
+
+.sidebar ul li a:hover {
+    background-color: #444;  /* Darker background on hover */
+}
+.app-container {
+    display: flex;
+    height: min-content;
+    position: fixed;
+
+}
+
+.sidebar {
+    width: 200px;
+    background-color: black;
+    color: white;
+    height: auto;
+    display: grid;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 100vh;
+
+}
+
+.homeIcon {
+    width: 90px; /* Set a fixed width for the icon */
+    height: 90px; /* Set a fixed height to maintain aspect ratio */
+    object-fit: contain; /* Ensures the image fits within its container */
+    display: block; /* Ensures the icon is a block-level element */
+    margin: 0 auto; /* Centers the icon horizontally */
+}
+
+
+.mainpage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #f4f4f4;
+    overflow-y: auto;
+    width: 100vw;
+}
+
+
+.header{
+    color: white;
+    background-color: rgb(0, 0, 0);
+    width: 100%;
+    justify-content: center;
+    display: flex;
+}
+
+.profile-container {
+    text-align: center;
+    margin-bottom: 5vh;
+}
+
+.table-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* Ruimte tussen de tabellen */
+    height: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table caption {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+    font-weight: bold; /* Vetgedrukt */
+    text-decoration: underline; /* Onderstreept */
+}
+
+.table th, .table td {
+    border: 1px solid #ccc;
+    padding: 10px;
+    text-align: left;
+}
+
+.table th {
+    background-color: #f4f4f4;
+}
+
+.table td {
+    font-size: 1.1em;
+}
+.profile-photo {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #ddd;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    margin: 40px;
+    transition: transform 0.3s ease;
+
+}
+
+.profile-photo:hover {
+    transform: scale(1.1);
+}
+.pagination {
+    margin-top: 10px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.pagination button {
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+.pagination button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
