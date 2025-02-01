@@ -1,11 +1,13 @@
-body{
+body {
     background-color: #f4f4f4;
-    margin:0;
+    margin: 0;
+    font-family: 'Garamond', serif; /* Elegant, classical typography */
 }
+
 .sidebar ul {
     list-style-type: none;
     padding: 0;
-    margin-top: 20px;     /* Spacing from top */
+    margin-top: 20px;
 }
 
 .sidebar ul li {
@@ -13,43 +15,43 @@ body{
 }
 
 .sidebar ul li a {
-    color: white;
+    color: #f1f1f1;
     text-decoration: none;
     font-size: 18px;
     display: block;
     padding: 10px;
+    font-family: 'Georgia', serif;
 }
 
 .sidebar ul li a:hover {
-    background-color: #444;  /* Darker background on hover */
+    background-color: #3e3e3e; /* Subtle hover effect */
 }
+
 .app-container {
     display: flex;
     height: min-content;
-    position: fixed;
-
+    position: relative;
 }
 
 .sidebar {
     width: 200px;
     background-color: black;
-    color: white;
+    color: #f1f1f1;
     height: auto;
     display: grid;
     flex-direction: column;
     justify-content: center;
     min-height: 100vh;
-
+    position: fixed;
 }
 
 .homeIcon {
-    width: 90px; /* Set a fixed width for the icon */
-    height: 90px; /* Set a fixed height to maintain aspect ratio */
-    object-fit: contain; /* Ensures the image fits within its container */
-    display: block; /* Ensures the icon is a block-level element */
-    margin: 0 auto; /* Centers the icon horizontally */
+    width: 90px;
+    height: 90px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
 }
-
 
 .mainpage {
     flex: 1;
@@ -59,16 +61,19 @@ body{
     align-items: center;
     background-color: #f4f4f4;
     overflow-y: auto;
-    width: 100vw;
+    margin-left: 10vw;
+    width: 90vw;
+    font-family: 'Garamond', serif;
 }
 
-
-.header{
-    color: white;
-    background-color: rgb(0, 0, 0);
+.header {
+    color: #f1f1f1;
+    background-color: #3e3e3e; /* Elegant dark header */
     width: 100%;
     justify-content: center;
     display: flex;
+    padding: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
 }
 
 .profile-container {
@@ -79,50 +84,91 @@ body{
 .table-container {
     display: flex;
     flex-direction: column;
-    gap: 20px; /* Ruimte tussen de tabellen */
+    gap: 20px;
     height: auto;
+    width: 80%;
+}
+
+.tables-flex {
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+    width: 100%;
+}
+
+.table-wrapper {
+    flex: 1;
+    min-width: 45%;
 }
 
 .table {
     width: 100%;
     border-collapse: collapse;
+    background: #333;
+    color: #f1f1f1;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .table caption {
-    font-size: 1.5em;
-    margin-bottom: 10px;
-    font-weight: bold; /* Vetgedrukt */
-    text-decoration: underline; /* Onderstreept */
+    font-size: 2em;
+    font-weight: bold;
+    padding: 12px;
+    background: linear-gradient(90deg, #8c6e3e, #d0a16d); /* Classic golden hues */
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
 }
 
 .table th, .table td {
-    border: 1px solid #ccc;
-    padding: 10px;
+    border: 1px solid #ddd;
+    padding: 12px;
     text-align: left;
+    font-size: 1.1em;
 }
 
 .table th {
-    background-color: #f4f4f4;
+    background: linear-gradient(90deg, #444, #333);
+    color: #d0a16d; /* Gold color for headers */
+    padding: 15px;
+    font-size: 1.2em;
+    text-align: left;
+    text-shadow: 1px 1px 2px black;
 }
 
 .table td {
+    padding: 12px;
     font-size: 1.1em;
+    border-bottom: 1px solid #555;
+    transition: background 0.3s ease-in-out;
 }
+
+.table tbody tr:hover {
+    background: rgba(255, 136, 0, 0.2);
+}
+
+.table tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.1);
+}
+
 .profile-photo {
     width: 150px;
     height: 150px;
     border-radius: 50%;
     object-fit: cover;
     border: 3px solid #ddd;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.3);
     margin: 40px;
     transition: transform 0.3s ease;
-
 }
 
 .profile-photo:hover {
     transform: scale(1.1);
 }
+
 .pagination {
     margin-top: 10px;
     display: flex;
@@ -131,12 +177,138 @@ body{
 }
 
 .pagination button {
-    padding: 5px 10px;
+    background: #d0a16d; /* Gold for pagination */
+    color: black;
+    font-weight: bold;
+    border: none;
+    padding: 8px 12px;
     cursor: pointer;
+    border-radius: 5px;
+    transition: 0.3s;
+}
+
+.pagination button:hover {
+    background: #8c6e3e; /* Darker gold */
 }
 
 .pagination button:disabled {
+    background: #777;
     cursor: not-allowed;
-    opacity: 0.5;
 }
+
+.table caption::before {
+    content: '\266A'; /* Music note icon */
+    margin-right: 8px;
+    font-size: 1.5em;
+}
+
+.wishlist-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #333;
+    color: #f1f1f1;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.wishlist-table caption {
+    font-size: 2em;
+    font-weight: bold;
+    padding: 12px;
+    background: linear-gradient(90deg, #8c6e3e, #d0a16d); /* Golden hues */
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+/* lessonpage
+ */
+
+.lesson-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 80%;
+    margin: 0 auto;
+
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+}
+
+form label {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #f1f1f1;
+}
+
+select, input[type="date"], input[type="time"] {
+    padding: 12px;
+    border: 1px solid #ddd;
+    background: #333;
+    color: #f1f1f1;
+    font-size: 1.1em;
+    border-radius: 5px;
+    transition: background 0.3s ease-in-out;
+}
+
+select:focus, input[type="date"]:focus, input[type="time"]:focus {
+    background: rgba(255, 136, 0, 0.2);
+    outline: none;
+}
+
+button.submit-btn {
+    padding: 12px 20px;
+    background: linear-gradient(90deg, #8c6e3e, #d0a16d); /* Classic golden hues */
+    color: white;
+    font-size: 1.2em;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    transition: background 0.3s ease-in-out;
+}
+
+button.submit-btn:hover {
+    background: linear-gradient(90deg, #d0a16d, #8c6e3e);
+}
+
+form select, form input {
+    width: 100%;
+}
+
+header h1 {
+    font-size: 2.5em;
+    text-align: center;
+    color: #f1f1f1;
+    margin-bottom: 20px;
+}
+
+.dashboard {
+    padding: 20px;
+    background: #333;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+/* formTitle */
+.formTitle {
+    font-size: 2em;
+    font-weight: bold;
+    padding: 12px;
+    background: linear-gradient(90deg, #8c6e3e, #d0a16d); /* Classic golden hues */
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    margin-bottom: 20px;
+}
+
 
