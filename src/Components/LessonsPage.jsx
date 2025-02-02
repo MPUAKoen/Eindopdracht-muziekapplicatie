@@ -22,24 +22,30 @@ const LessonsPage = () => {
     const [lessonDate, setLessonDate] = useState('');
     const [startTime, setStartTime] = useState('');
     const [endTime, setEndTime] = useState('');
+    const [homework, setHomework] = useState('');
+    const [pdfFiles, setPdfFiles] = useState([]);
 
     const handleInstrumentChange = (e) => setInstrument(e.target.value);
     const handleStudentChange = (e) => setStudent(e.target.value);
     const handleDateChange = (e) => setLessonDate(e.target.value);
     const handleStartTimeChange = (e) => setStartTime(e.target.value);
     const handleEndTimeChange = (e) => setEndTime(e.target.value);
+    const handleHomeworkChange = (e) => setHomework(e.target.value);
+    const handleFileChange = (e) => setPdfFiles([...e.target.files]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!instrument || !student || !lessonDate || !startTime || !endTime) {
             alert('Please fill in all fields');
         } else {
-            alert(`Lesson scheduled for ${student} on ${lessonDate} from ${startTime} to ${endTime} for ${instrument}`);
+            alert(`Lesson scheduled for ${student} on ${lessonDate} from ${startTime} to ${endTime} for ${instrument}. Homework: ${homework}`);
             setInstrument('');
             setStudent('');
             setLessonDate('');
             setStartTime('');
             setEndTime('');
+            setHomework('');
+            setPdfFiles([]);
         }
     };
 
@@ -54,74 +60,50 @@ const LessonsPage = () => {
                     <div className="form-group">
                         <div className="formTitle">Schedule lesson</div>
                         <label htmlFor="instrument">Select Instrument</label>
-                        <select
-                            id="instrument"
-                            value={instrument}
-                            onChange={handleInstrumentChange}
-                            required
-                        >
+                        <select id="instrument" value={instrument} onChange={handleInstrumentChange} required>
                             <option value="">-- Select an Instrument --</option>
                             {instruments.map((instrumentOption, index) => (
-                                <option key={index} value={instrumentOption}>
-                                    {instrumentOption}
-                                </option>
+                                <option key={index} value={instrumentOption}>{instrumentOption}</option>
                             ))}
                         </select>
                     </div>
 
                     <div className="form-group">
                         <label htmlFor="student">Select Student</label>
-                        <select
-                            id="student"
-                            value={student}
-                            onChange={handleStudentChange}
-                            required
-                        >
+                        <select id="student" value={student} onChange={handleStudentChange} required>
                             <option value="">-- Select a Student --</option>
                             {students.map((studentOption, index) => (
-                                <option key={index} value={studentOption}>
-                                    {studentOption}
-                                </option>
+                                <option key={index} value={studentOption}>{studentOption}</option>
                             ))}
                         </select>
                     </div>
 
                     <div className="form-group">
                         <label htmlFor="date">Lesson Date</label>
-                        <input
-                            type="date"
-                            id="date"
-                            value={lessonDate}
-                            onChange={handleDateChange}
-                            required
-                        />
+                        <input type="date" id="date" value={lessonDate} onChange={handleDateChange} required />
                     </div>
 
                     <div className="form-group">
                         <label htmlFor="startTime">Start Time</label>
-                        <input
-                            type="time"
-                            id="startTime"
-                            value={startTime}
-                            onChange={handleStartTimeChange}
-                            required
-                        />
+                        <input type="time" id="startTime" value={startTime} onChange={handleStartTimeChange} required />
                     </div>
 
                     <div className="form-group">
                         <label htmlFor="endTime">End Time</label>
-                        <input
-                            type="time"
-                            id="endTime"
-                            value={endTime}
-                            onChange={handleEndTimeChange}
-                            required
-                        />
+                        <input type="time" id="endTime" value={endTime} onChange={handleEndTimeChange} required />
                     </div>
 
-                    <button type="submit" className="submit-btn">
-                        Add
-                    </button>
+                    <div className="form-group">
+                        <label htmlFor="homework">Homework</label>
+                        <textarea id="homework" value={homework} onChange={handleHomeworkChange} placeholder="Enter homework details" />
+                    </div>
+
+                    <div className="form-group">
+                        <label htmlFor="pdfFiles">Upload PDFs</label>
+                        <input type="file" id="pdfFiles" accept="application/pdf" multiple onChange={handleFileChange} />
+                    </div>
+
+                    <button type="submit" className="submit-btn">Add</button>
                 </form>
             </div>
         </div>

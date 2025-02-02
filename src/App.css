@@ -260,7 +260,7 @@ select, input[type="date"], input[type="time"] {
 }
 
 select:focus, input[type="date"]:focus, input[type="time"]:focus {
-    background: rgba(255, 136, 0, 0.2);
+    background:black;
     outline: none;
 }
 
