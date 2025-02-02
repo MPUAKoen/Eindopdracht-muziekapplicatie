@@ -1,3 +1,4 @@
+/* Existing styles */
 body {
     background-color: #f4f4f4;
     margin: 0;
@@ -296,6 +297,7 @@ header h1 {
     background: #333;
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    margin: 50px;
 }
 /* formTitle */
 .formTitle {
@@ -311,4 +313,76 @@ header h1 {
     margin-bottom: 20px;
 }
 
+/* New styles for the homepage */
+.homepage-content {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+/* Widgets Container */
+.widgets-container {
+    display: grid;
+    grid-template-columns: 1fr; /* One column, full width */
+    gap: 20px; /* Space between widgets */
+    margin-top: 20px;
+    width: 80%; /* Match the width of the table-container */
+    margin-left: auto;
+    margin-right: auto;
+}
 
+/* Table Styling */
+.widget-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #333; /* Dark background like the tables */
+    color: #f1f1f1; /* Light text color */
+    border-radius: 10px; /* Rounded corners */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Subtle shadow */
+    overflow: hidden; /* Ensure rounded corners are visible */
+}
+
+/* Table Caption */
+.widget-table caption {
+    font-size: 1.5em;
+    font-weight: bold;
+    padding: 12px;
+    background: linear-gradient(90deg, #8c6e3e, #d0a16d); /* Golden gradient background */
+    color: white;
+    text-transform: uppercase; /* Uppercase text like table captions */
+    letter-spacing: 1px; /* Subtle letter spacing */
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+/* Table Header */
+.widget-table th {
+    background: linear-gradient(90deg, #444, #333);
+    color: #d0a16d; /* Gold color for headers */
+    padding: 15px;
+    font-size: 1.2em;
+    text-align: left;
+    text-shadow: 1px 1px 2px black;
+}
+
+/* Table Rows */
+.widget-table td {
+    padding: 12px;
+    font-size: 1.1em;
+    border-bottom: 1px solid #555; /* Border between rows */
+    transition: background 0.3s ease-in-out; /* Smooth hover transition */
+}
+
+/* Alternating Row Colors */
+.widget-table tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.1); /* 50% lighter */
+}
+
+.widget-table tbody tr:nth-child(odd) {
+    background: rgba(255, 255, 255, 0.05); /* 50% darker */
+}
+
+/* Hover Effect for Rows */
+.widget-table tbody tr:hover {
+    background: rgba(255, 136, 0, 0.2); /* Same hover effect as table rows */
+}
