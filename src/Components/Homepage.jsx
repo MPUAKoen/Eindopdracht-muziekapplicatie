@@ -12,7 +12,7 @@ const workingOnPieces = [
     },
     {
         title: "'Pa-Pa-Papagena'",
-        focus: "Working on duet timing with Elisa."
+        focus: "Work on duet timing"
     }
 ];
 

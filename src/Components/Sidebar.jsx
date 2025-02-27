@@ -20,11 +20,16 @@ const Sidebar = () => {
                         <img className="homeIcon" src="src/assets/music_user_account_profile-512.png"
                              alt="Profile Icon"/>
                     </Link>
+                    <Link to="/register">
+                        <img className="homeIcon" src="src/assets/music_user_account_profile-512.png"
+                             alt="Profile Icon"/>
+                    </Link>
                     <li>
                         <Link to="/homework">
                             <img className="homeIcon" src="src/assets/Homework.png"
                                  alt="Profile Icon"/>
                         </Link>
+
                     </li>
                 </li>
             </ul>

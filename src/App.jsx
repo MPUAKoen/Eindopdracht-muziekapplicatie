@@ -5,6 +5,8 @@ import AboutPage from "./Components/AboutPage.jsx";  // Make sure this component
 import './App.css';
 import LessonsPage from "./Components/LessonsPage.jsx";
 import Homework from "./Components/homework.jsx";
+import LoginPage from "./Components/LoginPage.jsx";
+import RegisterPage from "./Components/RegisterPage.jsx";
 
 const Navbar = () => (
     <div className="navbar">
@@ -24,6 +26,9 @@ const App = () => {
                         <Route path="/profile" element={<AboutPage />} />  {/* Add other routes here */}
                         <Route path="/lessons" element={<LessonsPage />} />  {/* Add other routes here */}
                         <Route path="/homework" element={<Homework />} />  {/* Add other routes here */}
+                        <Route path="/login" element={<LoginPage />} />  {/* Add other routes here */}
+                        <Route path="/register" element={<RegisterPage />} />  {/* Add other routes here */}
+
                     </Routes>
                 </div>
             </div>

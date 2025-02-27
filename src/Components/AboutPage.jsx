@@ -2,35 +2,50 @@ import React, { useState } from 'react';
 import '../App.css';
 
 const AboutPage = () => {
+    // Add dateAdded field to each item
     const repertoireData = [
-        { stuk: "'Ein Mädchen oder Weibchen'", componist: "Wolfgang Amadeus Mozart", type: "Opera" },
-        { stuk: "'Pa-Pa-Papagena'", componist: "Wolfgang Amadeus Mozart", type: "Duet" },
-        { stuk: "'Notte giorno faticar'", componist: "Wolfgang Amadeus Mozart", type: "Aria" },
-        { stuk: "'Largo al factotum'", componist: "Gioachino Rossini", type: "Aria" },
-        { stuk: "'O mio babbino caro'", componist: "Giacomo Puccini", type: "Aria" },
-        { stuk: "'Voi che sapete'", componist: "Wolfgang Amadeus Mozart", type: "Aria" },
+        { stuk: "'Ein Mädchen oder Weibchen'", componist: "Wolfgang Amadeus Mozart", type: "Opera", dateAdded: "2023-10-01" },
+        { stuk: "'Pa-Pa-Papagena'", componist: "Wolfgang Amadeus Mozart", type: "Duet", dateAdded: "2023-09-15" },
+        { stuk: "'Notte giorno faticar'", componist: "Wolfgang Amadeus Mozart", type: "Aria", dateAdded: "2023-10-05" },
+        { stuk: "'Largo al factotum'", componist: "Gioachino Rossini", type: "Aria", dateAdded: "2023-08-20" },
+        { stuk: "'O mio babbino caro'", componist: "Giacomo Puccini", type: "Aria", dateAdded: "2023-09-01" },
+        { stuk: "'Voi che sapete'", componist: "Wolfgang Amadeus Mozart", type: "Aria", dateAdded: "2023-10-10" },
     ];
 
     const favoritePieces = [
-        { stuk: "'Notte giorno faticar'", componist: "Wolfgang Amadeus Mozart" },
-        { stuk: "'Nel cor più non mi sento'", componist: "Giuseppe Sarti" },
-        { stuk: "'La ci darem la mano'", componist: "Wolfgang Amadeus Mozart" },
-        { stuk: "'Caro mio ben'", componist: "Giuseppe Giordani" },
+        { stuk: "'Notte giorno faticar'", componist: "Wolfgang Amadeus Mozart", dateAdded: "2023-09-10" },
+        { stuk: "'Nel cor più non mi sento'", componist: "Giuseppe Sarti", dateAdded: "2023-08-25" },
+        { stuk: "'La ci darem la mano'", componist: "Wolfgang Amadeus Mozart", dateAdded: "2023-10-02" },
+        { stuk: "'Caro mio ben'", componist: "Giuseppe Giordani", dateAdded: "2023-09-20" },
     ];
 
     const learningPieces = [
-        { stuk: "'Concone 3'", componist: "Giuseppe Concone" },
-        { stuk: "'Ein Mädchen oder Weibchen'", componist: "Wolfgang Amadeus Mozart" },
-        { stuk: "'Ave Maria'", componist: "Franz Schubert" },
-        { stuk: "'Casta Diva'", componist: "Vincenzo Bellini" },
+        { stuk: "'Concone 3'", componist: "Giuseppe Concone", dateAdded: "2023-08-15" },
+        { stuk: "'Ein Mädchen oder Weibchen'", componist: "Wolfgang Amadeus Mozart", dateAdded: "2023-09-05" },
+        { stuk: "'Ave Maria'", componist: "Franz Schubert", dateAdded: "2023-10-01" },
+        { stuk: "'Casta Diva'", componist: "Vincenzo Bellini", dateAdded: "2023-09-30" },
     ];
 
     const wishlist = [
-        { stuk: "'Requiem'", componist: "Wolfgang Amadeus Mozart" },
-        { stuk: "'La Traviata'", componist: "Giuseppe Verdi" },
+        { stuk: "'Requiem'", componist: "Wolfgang Amadeus Mozart", dateAdded: "2023-08-10" },
+        { stuk: "'La Traviata'", componist: "Giuseppe Verdi", dateAdded: "2023-09-25" },
     ];
 
-    const itemsPerPage = 2;
+    // Helper function to format date as dag-maand-jaar
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        const day = String(date.getDate()).padStart(2, '0'); // Ensure 2 digits
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+        const year = date.getFullYear();
+        return `${day}-${month}-${year}`;
+    };
+
+    // Sort data by dateAdded (newest first)
+    const sortByDateAdded = (data) => {
+        return data.sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));
+    };
+
+    const itemsPerPage = 5;
     const [currentRepertoirePage, setCurrentRepertoirePage] = useState(1);
     const [currentFavoritePage, setCurrentFavoritePage] = useState(1);
     const [currentLearningPage, setCurrentLearningPage] = useState(1);
@@ -81,13 +96,14 @@ const AboutPage = () => {
                         <table className="table">
                             <caption>Favoriete Stukken</caption>
                             <thead>
-                            <tr><th>Stuk</th><th>Componist</th></tr>
+                            <tr><th>Stuk</th><th>Componist</th><th>Date Added</th></tr>
                             </thead>
                             <tbody>
-                            {paginate(favoritePieces, currentFavoritePage, itemsPerPage).map((item, index) => (
+                            {paginate(sortByDateAdded(favoritePieces), currentFavoritePage, itemsPerPage).map((item, index) => (
                                 <tr key={index}>
                                     <td>{item.stuk}</td>
                                     <td>{item.componist}</td>
+                                    <td>{formatDate(item.dateAdded)}</td>
                                 </tr>
                             ))}
                             </tbody>
@@ -104,13 +120,14 @@ const AboutPage = () => {
                         <table className="table">
                             <caption>Wishlist</caption>
                             <thead>
-                            <tr><th>Stuk</th><th>Componist</th></tr>
+                            <tr><th>Stuk</th><th>Componist</th><th>Date Added</th></tr>
                             </thead>
                             <tbody>
-                            {paginate(wishlist, currentWishlistPage, itemsPerPage).map((item, index) => (
+                            {paginate(sortByDateAdded(wishlist), currentWishlistPage, itemsPerPage).map((item, index) => (
                                 <tr key={index}>
                                     <td>{item.stuk}</td>
                                     <td>{item.componist}</td>
+                                    <td>{formatDate(item.dateAdded)}</td>
                                 </tr>
                             ))}
                             </tbody>
@@ -129,13 +146,14 @@ const AboutPage = () => {
                         <table className="table">
                             <caption>Momenteel Aan Het Leren</caption>
                             <thead>
-                            <tr><th>Stuk</th><th>Componist</th></tr>
+                            <tr><th>Stuk</th><th>Componist</th><th>Date Added</th></tr>
                             </thead>
                             <tbody>
-                            {paginate(learningPieces, currentLearningPage, itemsPerPage).map((item, index) => (
+                            {paginate(sortByDateAdded(learningPieces), currentLearningPage, itemsPerPage).map((item, index) => (
                                 <tr key={index}>
                                     <td>{item.stuk}</td>
                                     <td>{item.componist}</td>
+                                    <td>{formatDate(item.dateAdded)}</td>
                                 </tr>
                             ))}
                             </tbody>
@@ -152,14 +170,15 @@ const AboutPage = () => {
                         <table className="table">
                             <caption>Repertoire</caption>
                             <thead>
-                            <tr><th>Stuk</th><th>Componist</th><th>Type</th></tr>
+                            <tr><th>Stuk</th><th>Componist</th><th>Type</th><th>Date Added</th></tr>
                             </thead>
                             <tbody>
-                            {paginate(repertoireData, currentRepertoirePage, itemsPerPage).map((item, index) => (
+                            {paginate(sortByDateAdded(repertoireData), currentRepertoirePage, itemsPerPage).map((item, index) => (
                                 <tr key={index}>
                                     <td>{item.stuk}</td>
                                     <td>{item.componist}</td>
                                     <td>{item.type}</td>
+                                    <td>{formatDate(item.dateAdded)}</td>
                                 </tr>
                             ))}
                             </tbody>
