@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import '../App.css';
 
-const LessonsPage = () => {
+const Schedule = () => {
     const students = [
         'John Doe',
         'Jane Smith',
@@ -110,4 +110,4 @@ const LessonsPage = () => {
     );
 };
 
-export default LessonsPage;
+export default Schedule;

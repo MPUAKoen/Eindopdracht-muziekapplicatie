@@ -44,6 +44,7 @@ body {
     justify-content: center;
     min-height: 100vh;
     position: fixed;
+    z-index: 10;
 }
 
 .homeIcon {
@@ -387,4 +388,8 @@ header h1 {
 /* Hover Effect for Rows */
 .widget-table tbody tr:hover {
     background: rgba(255, 136, 0, 0.2); /* Same hover effect as table rows */
+}
+
+.student-container{
+    margin-top: 50px;
 }

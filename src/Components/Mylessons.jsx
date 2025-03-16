@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import '../App.css';
 
-const AllLessonsPage = () => {
+const Mylessons = () => {
     const [lessons, setLessons] = useState([
         { student: 'John Doe', instrument: 'Piano', date: '2024-02-05', startTime: '10:00', endTime: '11:00', homework: 'Practice scales', pdfDocument: 'lesson1.pdf' },
         { student: 'Jane Smith', instrument: 'Guitar', date: '2024-02-06', startTime: '12:00', endTime: '13:00', homework: 'Strumming exercises', pdfDocument: 'lesson2.pdf' },
@@ -49,4 +49,4 @@ const AllLessonsPage = () => {
     );
 };
 
-export default AllLessonsPage;
+export default Mylessons;
