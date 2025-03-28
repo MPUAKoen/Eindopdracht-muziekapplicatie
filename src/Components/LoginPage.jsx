@@ -1,62 +1,55 @@
-import React, { useState } from 'react';
-import '../App.css';
+import { useState, useEffect } from "react";
 
-const LoginPage = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+const Homepage = () => {
+    const [welcomeMessage, setWelcomeMessage] = useState("");
+    const [lessons, setLessons] = useState([]);
+    const [homework, setHomework] = useState([]);
+    const [pieces, setPieces] = useState([]);
 
-    const handleEmailChange = (e) => setEmail(e.target.value);
-    const handlePasswordChange = (e) => setPassword(e.target.value);
+    useEffect(() => {
+        fetch("/api/welcome")
+            .then((res) => res.json())
+            .then((data) => setWelcomeMessage(data.message));
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (!email || !password) {
-            alert('Please fill in all fields');
-        } else {
-            alert(`Logged in with email: ${email}`);
-            setEmail('');
-            setPassword('');
-        }
-    };
+        fetch("/api/lessons")
+            .then((res) => res.json())
+            .then((data) => setLessons(data));
+
+        fetch("/api/homework")
+            .then((res) => res.json())
+            .then((data) => setHomework(data));
+
+        fetch("/api/pieces")
+            .then((res) => res.json())
+            .then((data) => setPieces(data));
+    }, []);
 
     return (
-        <div className="mainpage">
-            <div className="header">
-                <h1>Login</h1>
-            </div>
+        <div>
+            <h1>{welcomeMessage}</h1>
 
-            <div className="dashboard">
-                <form onSubmit={handleSubmit} className="lesson-form">
-                    <div className="form-group">
-                        <div className="formTitle">Login to your account</div>
-                        <label htmlFor="email">Email</label>
-                        <input
-                            type="email"
-                            id="email"
-                            value={email}
-                            onChange={handleEmailChange}
-                            placeholder="Enter your email"
-                            required
-                        />
-                    </div>
+            <h2>Upcoming Lessons</h2>
+            <ul>
+                {lessons.map((lesson, index) => (
+                    <li key={index}>{lesson.lesson} - {lesson.time}</li>
+                ))}
+            </ul>
 
-                    <div className="form-group">
-                        <label htmlFor="password">Password</label>
-                        <input
-                            type="password"
-                            id="password"
-                            value={password}
-                            onChange={handlePasswordChange}
-                            placeholder="Enter your password"
-                            required
-                        />
-                    </div>
+            <h2>Recent Homework</h2>
+            <ul>
+                {homework.map((task, index) => (
+                    <li key={index}>{task.date}: {task.assignment}</li>
+                ))}
+            </ul>
 
-                    <button type="submit" className="submit-btn">Login</button>
-                </form>
-            </div>
+            <h2>Pieces You're Working On</h2>
+            <ul>
+                {pieces.map((piece, index) => (
+                    <li key={index}><strong>{piece.title}</strong>: {piece.focus}</li>
+                ))}
+            </ul>
         </div>
     );
 };
 
-export default LoginPage;
+export default Homepage;

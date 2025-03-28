@@ -393,3 +393,56 @@ header h1 {
 .student-container{
     margin-top: 50px;
 }
+
+
+.add-piece-form {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    max-width: 800px;
+    width: 100%;
+    background-color: #3e3e3e;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.add-piece-form input {
+    padding: 12px;
+    font-size: 1em;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+    transition: background 0.3s ease;
+    flex: 1;
+}
+
+.add-piece-form input:focus {
+    background-color: #e0e0e0;
+    outline: none;
+}
+
+.add-piece-btn {
+    padding: 12px;
+    font-size: 1.2em;
+    color: #fff;
+    background: linear-gradient(90deg, #8c6e3e, #d0a16d); /* Classic golden hues */
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s ease-in-out;
+    flex-basis: 100%;
+}
+
+.add-piece-btn:hover {
+    background: linear-gradient(90deg, #d0a16d, #8c6e3e);
+}
+
+.add-piece-btn:active {
+    background: #8c6e3e;
+}
+
+/* Adjust input fields to take up equal space */
+.add-piece-form input {
+    flex: 1;
+}

@@ -1,33 +1,44 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import '../App.css';
 
-const workingOnPieces = [
-    {
-        title: "'Notte giorno faticar'",
-        focus: "Focus on dynamics and phrasing."
-    },
-    {
-        title: "'Ein Mädchen oder Weibchen'",
-        focus: "Perfect the high notes."
-    },
-    {
-        title: "'Pa-Pa-Papagena'",
-        focus: "Work on duet timing"
-    }
-];
-
 const Homepage = () => {
+    const [workingOnPieces, setWorkingOnPieces] = useState([]);
+    const [newTitle, setNewTitle] = useState("");
+    const [newFocus, setNewFocus] = useState("");
+
+    useEffect(() => {
+        fetch("/api/pieces")
+            .then((res) => res.json())
+            .then((data) => setWorkingOnPieces(data));
+    }, []);
+
+    const handleAddPiece = () => {
+        if (!newTitle || !newFocus) return;
+
+        const newPiece = { title: newTitle, focus: newFocus };
+
+        fetch("/api/pieces", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(newPiece),
+        })
+            .then((res) => res.text())
+            .then(() => {
+                setWorkingOnPieces([...workingOnPieces, newPiece]);
+                setNewTitle("");
+                setNewFocus("");
+            });
+    };
+
     return (
         <div className="mainpage">
-            {/* Consistent Header */}
             <div className="header">
                 <h1>Home</h1>
             </div>
 
             <div className="homepage-content">
-                {/* Widgets Container */}
                 <div className="widgets-container">
-                    {/* Table 1: Welcome Message */}
+                    {/* Welcome Message */}
                     <table className="widget-table">
                         <caption>Welcome Back, Koen!</caption>
                         <tbody>
@@ -37,7 +48,7 @@ const Homepage = () => {
                         </tbody>
                     </table>
 
-                    {/* Table 2: Upcoming Lessons */}
+                    {/* Upcoming Lessons */}
                     <table className="widget-table">
                         <caption>Upcoming Lessons</caption>
                         <thead>
@@ -58,7 +69,7 @@ const Homepage = () => {
                         </tbody>
                     </table>
 
-                    {/* Table 3: Recent Homework */}
+                    {/* Recent Homework */}
                     <table className="widget-table">
                         <caption>Recent Homework</caption>
                         <tbody>
@@ -73,7 +84,7 @@ const Homepage = () => {
                         </tbody>
                     </table>
 
-                    {/* Table 4: Working on Pieces */}
+                    {/* Working on Pieces */}
                     <table className="widget-table">
                         <caption>Working on Pieces</caption>
                         <thead>
@@ -91,6 +102,23 @@ const Homepage = () => {
                         ))}
                         </tbody>
                     </table>
+
+                    {/* Add New Piece Form */}
+                    <div className="add-piece-form">
+                        <input
+                            type="text"
+                            placeholder="Piece Title"
+                            value={newTitle}
+                            onChange={(e) => setNewTitle(e.target.value)}
+                        />
+                        <input
+                            type="text"
+                            placeholder="Focus"
+                            value={newFocus}
+                            onChange={(e) => setNewFocus(e.target.value)}
+                        />
+                        <button className="add-piece-btn" onClick={handleAddPiece}>Add Piece</button>
+                    </div>
                 </div>
             </div>
         </div>
