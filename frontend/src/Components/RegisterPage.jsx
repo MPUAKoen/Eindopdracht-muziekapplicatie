@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import '../App.css';
 
 const RegisterPage = () => {
@@ -12,18 +13,38 @@ const RegisterPage = () => {
     const handlePasswordChange = (e) => setPassword(e.target.value);
     const handleConfirmPasswordChange = (e) => setConfirmPassword(e.target.value);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Client-side validation
         if (!name || !email || !password || !confirmPassword) {
             alert('Please fill in all fields');
-        } else if (password !== confirmPassword) {
+            return;
+        }
+        if (password !== confirmPassword) {
             alert('Passwords do not match');
-        } else {
-            alert(`Registered successfully with email: ${email}`);
+            return;
+        }
+
+        try {
+            // Send registration data to backend
+            const response = await axios.post('http://localhost:8080/api/user/register', {
+                name,
+                email,
+                password
+            });
+
+            // Handle success
+            alert(response.data);
             setName('');
             setEmail('');
             setPassword('');
             setConfirmPassword('');
+
+        } catch (error) {
+            // Handle errors
+            const errorMessage = error.response?.data || 'Registration failed';
+            alert(errorMessage);
         }
     };
 
