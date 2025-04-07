@@ -1,21 +1,41 @@
 import React, { useState } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';  // Import useNavigate
 import '../App.css';
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const navigate = useNavigate();  // Initialize the navigate function
 
     const handleEmailChange = (e) => setEmail(e.target.value);
     const handlePasswordChange = (e) => setPassword(e.target.value);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+
         if (!email || !password) {
             alert('Please fill in all fields');
-        } else {
-            alert(`Logged in successfully with email: ${email}`);
+            return;
+        }
+
+        try {
+            const response = await axios.post('http://localhost:8080/api/user/login', {
+                email,
+                password
+            }, {
+                withCredentials: true 
+            });
+
+            alert(response.data); // e.g. "Login successful"
             setEmail('');
             setPassword('');
+
+            // Redirect to the homepage after successful login
+            navigate('/'); 
+        } catch (error) {
+            const errorMessage = error.response?.data || 'Login failed';
+            alert(errorMessage);
         }
     };
 

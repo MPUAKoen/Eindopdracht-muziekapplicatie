@@ -7,11 +7,13 @@ const RegisterPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [instrument, setInstrument] = useState(null); // State for instrument
 
     const handleNameChange = (e) => setName(e.target.value);
     const handleEmailChange = (e) => setEmail(e.target.value);
     const handlePasswordChange = (e) => setPassword(e.target.value);
     const handleConfirmPasswordChange = (e) => setConfirmPassword(e.target.value);
+    const handleInstrumentChange = (e) => setInstrument(e.target.value || null); // Set instrument to null if "empty" is selected
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -31,7 +33,10 @@ const RegisterPage = () => {
             const response = await axios.post('http://localhost:8080/api/user/register', {
                 name,
                 email,
-                password
+                password,
+                instrument // Send instrument selection
+            }, {
+                withCredentials: true
             });
 
             // Handle success
@@ -40,6 +45,7 @@ const RegisterPage = () => {
             setEmail('');
             setPassword('');
             setConfirmPassword('');
+            setInstrument(null); // Reset instrument after submission
 
         } catch (error) {
             // Handle errors
@@ -103,6 +109,34 @@ const RegisterPage = () => {
                             placeholder="Confirm your password"
                             required
                         />
+                    </div>
+
+                    {/* Dropdown for instrument selection */}
+                    <div className="form-group">
+                        <label htmlFor="instrument">Instrument</label>
+                        <select
+                            id="instrument"
+                            value={instrument}
+                            onChange={handleInstrumentChange}
+                        >
+                            <option value={null}>Empty</option>
+                            <option value="Piano">Piano</option>
+                            <option value="Guitar">Guitar</option>
+                            <option value="Violin">Violin</option>
+                            <option value="Drums">Drums</option>
+                            <option value="Flute">Flute</option>
+                            <option value="Saxophone">Saxophone</option>
+                            <option value="Classical Singing">Classical Singing</option>
+                            <option value="Bassoon">Bassoon</option>
+                            <option value="Cello">Cello</option>
+                            <option value="Trumpet">Trumpet</option>
+                            <option value="Clarinet">Clarinet</option>
+                            <option value="Harp">Harp</option>
+                            <option value="Timpani">Timpani</option>
+                            <option value="French Horn">French Horn</option>
+                            <option value="Tuba">Tuba</option>
+                            {/* Add more instruments as needed */}
+                        </select>
                     </div>
 
                     <button type="submit" className="submit-btn">Register</button>
