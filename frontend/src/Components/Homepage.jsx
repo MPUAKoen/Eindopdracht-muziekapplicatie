@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useUser } from '../Context/UserContext'; // Import the useUser hook
 import '../App.css';
 
 const Homepage = () => {
     const [workingOnPieces, setWorkingOnPieces] = useState([]);
     const [newTitle, setNewTitle] = useState("");
     const [newFocus, setNewFocus] = useState("");
+    const { user } = useUser(); // Get user data from context
 
     useEffect(() => {
         fetch("/api/pieces")
@@ -40,11 +42,11 @@ const Homepage = () => {
                 <div className="widgets-container">
                     {/* Welcome Message */}
                     <table className="widget-table">
-                        <caption>Welcome Back, [user.email]!</caption>
+                        <caption>Welcome Back, {user ? user.name : "Guest"}!</caption> 
                         <tbody>
-                        <tr>
-                            <td>Here’s a quick overview of your account.</td>
-                        </tr>
+                            <tr>
+                                <td>Here’s a quick overview of your account.</td>
+                            </tr>
                         </tbody>
                     </table>
 
@@ -52,35 +54,20 @@ const Homepage = () => {
                     <table className="widget-table">
                         <caption>Upcoming Lessons</caption>
                         <thead>
-                        <tr>
-                            <th>Lesson</th>
-                            <th>Time</th>
-                        </tr>
+                            <tr>
+                                <th>Lesson</th>
+                                <th>Time</th>
+                            </tr>
                         </thead>
                         <tbody>
-                        <tr>
-                            <td>Lesson 1</td>
-                            <td>10:00 AM - 11:00 AM</td>
-                        </tr>
-                        <tr>
-                            <td>Lesson 2</td>
-                            <td>2:00 PM - 3:00 PM</td>
-                        </tr>
-                        </tbody>
-                    </table>
-
-                    {/* Recent Homework */}
-                    <table className="widget-table">
-                        <caption>Recent Homework</caption>
-                        <tbody>
-                        <tr>
-                            <th>Date</th>
-                            <th>Assignment</th>
-                        </tr>
-                        <tr>
-                            <td>19-01</td>
-                            <td>Complete your last assignment on "Music Theory" to stay on track.</td>
-                        </tr>
+                            <tr>
+                                <td>Lesson 1</td>
+                                <td>10:00 AM - 11:00 AM</td>
+                            </tr>
+                            <tr>
+                                <td>Lesson 2</td>
+                                <td>2:00 PM - 3:00 PM</td>
+                            </tr>
                         </tbody>
                     </table>
 
@@ -88,18 +75,18 @@ const Homepage = () => {
                     <table className="widget-table">
                         <caption>Working on Pieces</caption>
                         <thead>
-                        <tr>
-                            <th>Piece</th>
-                            <th>Focus</th>
-                        </tr>
+                            <tr>
+                                <th>Piece</th>
+                                <th>Focus</th>
+                            </tr>
                         </thead>
                         <tbody>
-                        {workingOnPieces.map((piece, index) => (
-                            <tr key={index}>
-                                <td>{piece.title}</td>
-                                <td>{piece.focus}</td>
-                            </tr>
-                        ))}
+                            {workingOnPieces.map((piece, index) => (
+                                <tr key={index}>
+                                    <td>{piece.title}</td>
+                                    <td>{piece.focus}</td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
 

@@ -25,10 +25,11 @@ public class AuthController {
     @GetMapping("/current")
     public ResponseEntity<CurrentUserResponse> getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).body(null);
+        }
         User currentUser = (User) authentication.getPrincipal();
-        return ResponseEntity.ok(new CurrentUserResponse(
-                currentUser.getEmail(),
-                currentUser.getName()));
+        return ResponseEntity.ok(new CurrentUserResponse(currentUser.getEmail(), currentUser.getName()));
     }
 
     // REGISTRATION ENDPOINT
