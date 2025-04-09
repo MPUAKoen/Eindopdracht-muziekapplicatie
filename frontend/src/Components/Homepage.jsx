@@ -40,7 +40,7 @@ const Homepage = () => {
                 <div className="widgets-container">
                     {/* Welcome Message */}
                     <table className="widget-table">
-                        <caption>Welcome Back, Koen!</caption>
+                        <caption>Welcome Back, [user.email]!</caption>
                         <tbody>
                         <tr>
                             <td>Here’s a quick overview of your account.</td>

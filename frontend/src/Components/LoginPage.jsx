@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';  // Import useNavigate
+import { useNavigate } from 'react-router-dom';
+import { useUser } from '../Context/UserContext';  // Import useUser from Context
 import '../App.css';
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const navigate = useNavigate();  // Initialize the navigate function
+    const { login } = useUser();  // Use login method from context
+    const navigate = useNavigate();
 
     const handleEmailChange = (e) => setEmail(e.target.value);
     const handlePasswordChange = (e) => setPassword(e.target.value);
@@ -24,18 +26,19 @@ const LoginPage = () => {
                 email,
                 password
             }, {
-                withCredentials: true 
+                withCredentials: true
             });
 
-            alert(response.data); // e.g. "Login successful"
+            // Assume user data contains the user's name or other info
+            const userData = response.data;  // Modify based on actual API response
+            login(userData);  // Update global user state
+
+            alert('Login successful');
             setEmail('');
             setPassword('');
-
-            // Redirect to the homepage after successful login
-            navigate('/'); 
+            navigate('/');  // Redirect to homepage
         } catch (error) {
-            const errorMessage = error.response?.data || 'Login failed';
-            alert(errorMessage);
+            alert('Login failed');
         }
     };
 
