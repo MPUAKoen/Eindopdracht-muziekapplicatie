@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
 
-
 const UserContext = createContext();
 
 export const useUser = () => {
@@ -16,7 +15,7 @@ export const UserProvider = ({ children }) => {
 
     const logout = () => {
         setUser(null);
-        localStorage.removeItem('authToken');  // Remove token on logout
+        localStorage.removeItem('authToken');
     };
 
     return (

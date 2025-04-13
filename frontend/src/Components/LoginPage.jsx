@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../Context/UserContext';  // Import useUser from Context
+import { useUser } from '../Context/UserContext';
 import '../App.css';
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const { login } = useUser();  // Access the login function from context
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
+    const { login } = useUser();
     const navigate = useNavigate();
 
     const handleEmailChange = (e) => setEmail(e.target.value);
@@ -15,35 +17,49 @@ const LoginPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError('');
 
         if (!email || !password) {
-            alert('Please fill in all fields');
+            setError('Please fill in all fields');
             return;
         }
 
+        setIsLoading(true);
+
         try {
-            const response = await axios.post('http://localhost:8080/api/user/login', {
-                email,
-                password
-            }, {
-                withCredentials: true
-            });
+            // Perform login
+            const loginResponse = await axios.post(
+                'http://localhost:8080/api/user/login',
+                { email, password },
+                { withCredentials: true }
+            );
 
-        
-            const token = response.data.token; 
-            if (token) {
-                const userData = response.data.user;  
-                login(userData);  
+            if (loginResponse.data === "Login successful") {
+                // Fetch complete user data after login
+                const userResponse = await axios.get(
+                    'http://localhost:8080/api/user/current',
+                    { withCredentials: true }
+                );
 
-                alert('Login successful');
-                setEmail('');
-                setPassword('');
-                navigate('/');  // Redirect to homepage or user dashboard
+                if (userResponse.data) {
+                    // Update user context with complete user data
+                    login(userResponse.data);
+                    
+                    // Clear form and redirect
+                    setEmail('');
+                    setPassword('');
+                    navigate('/');
+                } else {
+                    setError('Failed to fetch user data after login');
+                }
             } else {
-                alert('Login failed: No token received');
+                setError(loginResponse.data || 'Login failed');
             }
         } catch (error) {
-            alert('Login failed: ' + error.message);
+            console.error('Login error:', error);
+            setError(error.response?.data?.message || error.message || 'Login failed. Please try again.');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -58,6 +74,12 @@ const LoginPage = () => {
                     <div className="form-group">
                         <div className="formTitle">Log in to your account</div>
 
+                        {error && (
+                            <div className="error-message">
+                                {error}
+                            </div>
+                        )}
+
                         <div className="form-group">
                             <label htmlFor="email">Email</label>
                             <input
@@ -67,6 +89,7 @@ const LoginPage = () => {
                                 onChange={handleEmailChange}
                                 placeholder="Enter your email"
                                 required
+                                disabled={isLoading}
                             />
                         </div>
 
@@ -79,10 +102,17 @@ const LoginPage = () => {
                                 onChange={handlePasswordChange}
                                 placeholder="Enter your password"
                                 required
+                                disabled={isLoading}
                             />
                         </div>
 
-                        <button type="submit" className="submit-btn">Login</button>
+                        <button 
+                            type="submit" 
+                            className="submit-btn"
+                            disabled={isLoading}
+                        >
+                            {isLoading ? 'Logging in...' : 'Login'}
+                        </button>
                     </div>
                 </form>
             </div>

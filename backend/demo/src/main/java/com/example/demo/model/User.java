@@ -3,7 +3,6 @@ package com.example.demo.model;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import jakarta.persistence.Id;
@@ -11,11 +10,15 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
+import jakarta.persistence.FetchType;
+import java.io.Serializable;
 import java.util.List;
 
 @Entity
 @Table(name = "users")
-public class User implements UserDetails {
+public class User implements UserDetails, Serializable {
+
+    private static final long serialVersionUID = 1L; // For proper serialization
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,15 +39,15 @@ public class User implements UserDetails {
     @Column(nullable = true)
     private String instrument;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @Column(nullable = true)
     private List<String> workingOnPieces;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @Column(nullable = true)
     private List<String> repertoire;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @Column(nullable = true)
     private List<String> wishlist;
 
@@ -53,8 +56,7 @@ public class User implements UserDetails {
     }
 
     public User(String name, String email, String password, String role, String instrument,
-            List<String> workingOnPieces,
-            List<String> repertoire, List<String> wishlist) {
+            List<String> workingOnPieces, List<String> repertoire, List<String> wishlist) {
         this.name = name;
         this.email = email;
         this.password = password;
@@ -66,6 +68,7 @@ public class User implements UserDetails {
     }
 
     // Getters and Setters
+
     public Long getId() {
         return id;
     }
@@ -139,16 +142,14 @@ public class User implements UserDetails {
     }
 
     // Implementing UserDetails methods
-
     @Override
     public List<GrantedAuthority> getAuthorities() {
-        // Map the role to a SimpleGrantedAuthority
         return List.of(new SimpleGrantedAuthority("ROLE_" + this.role));
     }
 
     @Override
     public String getUsername() {
-        return email; // Or use any other unique identifier for your user
+        return email; // Unique identifier
     }
 
     @Override

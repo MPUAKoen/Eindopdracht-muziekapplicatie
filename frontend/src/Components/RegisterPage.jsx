@@ -7,18 +7,17 @@ const RegisterPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [instrument, setInstrument] = useState(null); // State for instrument
+    const [instrument, setInstrument] = useState(null);
 
     const handleNameChange = (e) => setName(e.target.value);
     const handleEmailChange = (e) => setEmail(e.target.value);
     const handlePasswordChange = (e) => setPassword(e.target.value);
     const handleConfirmPasswordChange = (e) => setConfirmPassword(e.target.value);
-    const handleInstrumentChange = (e) => setInstrument(e.target.value || null); // Set instrument to null if "empty" is selected
+    const handleInstrumentChange = (e) => setInstrument(e.target.value || null);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Client-side validation
         if (!name || !email || !password || !confirmPassword) {
             alert('Please fill in all fields');
             return;
@@ -29,26 +28,23 @@ const RegisterPage = () => {
         }
 
         try {
-            // Send registration data to backend
             const response = await axios.post('http://localhost:8080/api/user/register', {
                 name,
                 email,
                 password,
-                instrument // Send instrument selection
+                instrument
             }, {
                 withCredentials: true
             });
 
-            // Handle success
             alert(response.data);
             setName('');
             setEmail('');
             setPassword('');
             setConfirmPassword('');
-            setInstrument(null); // Reset instrument after submission
+            setInstrument(null);
 
         } catch (error) {
-            // Handle errors
             const errorMessage = error.response?.data || 'Registration failed';
             alert(errorMessage);
         }
@@ -111,7 +107,6 @@ const RegisterPage = () => {
                         />
                     </div>
 
-                    {/* Dropdown for instrument selection */}
                     <div className="form-group">
                         <label htmlFor="instrument">Instrument</label>
                         <select
@@ -135,7 +130,6 @@ const RegisterPage = () => {
                             <option value="Timpani">Timpani</option>
                             <option value="French Horn">French Horn</option>
                             <option value="Tuba">Tuba</option>
-                            {/* Add more instruments as needed */}
                         </select>
                     </div>
 
