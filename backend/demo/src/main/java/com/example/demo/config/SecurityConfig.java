@@ -6,7 +6,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -27,11 +26,13 @@ public class SecurityConfig {
     private static final String[] PUBLIC_ENDPOINTS = {
             "/api/user/login",
             "/api/user/register",
+            "/api/user/validate-session",
             "/api/public/**"
     };
 
     private static final String[] AUTHENTICATED_ENDPOINTS = {
             "/api/user/current",
+            "/api/piece/**",
             "/api/private/**"
     };
 
@@ -45,16 +46,22 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                         .requestMatchers(AUTHENTICATED_ENDPOINTS).authenticated()
                         .anyRequest().permitAll())
-                .formLogin(AbstractHttpConfigurer::disable)
+                .formLogin(form -> form.disable())
+                .rememberMe(remember -> remember
+                        .key("very-secure-remember-me-key")
+                        .tokenValiditySeconds(86400 * 30) // 30 days
+                        .userDetailsService(userDetailsService()))
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                        .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
+                        .sessionFixation(sessionFixation -> sessionFixation.migrateSession())
+                        .invalidSessionUrl("/api/user/login")
                         .maximumSessions(1)
-                        .expiredUrl("/login?expired"));
+                        .expiredUrl("/api/user/login"));
 
         return http.build();
     }

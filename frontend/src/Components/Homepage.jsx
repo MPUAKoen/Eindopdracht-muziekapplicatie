@@ -6,7 +6,7 @@ const Homepage = () => {
     const [workingOnPieces, setWorkingOnPieces] = useState([]);
     const [newTitle, setNewTitle] = useState("");
     const [newFocus, setNewFocus] = useState("");
-    const { user } = useUser(); // Get user data from context
+    const { user, loading } = useUser(); // ✅ include loading
 
     useEffect(() => {
         fetch("/api/pieces")
@@ -31,6 +31,8 @@ const Homepage = () => {
                 setNewFocus("");
             });
     };
+
+    if (loading) return <div>Loading user...</div>; // ✅ wait until user context is loaded
 
     return (
         <div className="mainpage">

@@ -1,199 +1,139 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useUser } from '../Context/UserContext';
 import '../App.css';
 
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+};
+
+const sortByDateAdded = (data) => data.sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));
+const itemsPerPage = 5;
+const paginate = (data, currentPage, itemsPerPage) => data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+const totalPages = (data) => Math.ceil(data.length / itemsPerPage);
+
 const AboutPage = () => {
-    // Add dateAdded field to each item
-    const repertoireData = [
-        { stuk: "'Ein Mädchen oder Weibchen'", componist: "Wolfgang Amadeus Mozart", type: "Opera", dateAdded: "2023-10-01" },
-        { stuk: "'Pa-Pa-Papagena'", componist: "Wolfgang Amadeus Mozart", type: "Duet", dateAdded: "2023-09-15" },
-        { stuk: "'Notte giorno faticar'", componist: "Wolfgang Amadeus Mozart", type: "Aria", dateAdded: "2023-10-05" },
-        { stuk: "'Largo al factotum'", componist: "Gioachino Rossini", type: "Aria", dateAdded: "2023-08-20" },
-        { stuk: "'O mio babbino caro'", componist: "Giacomo Puccini", type: "Aria", dateAdded: "2023-09-01" },
-        { stuk: "'Voi che sapete'", componist: "Wolfgang Amadeus Mozart", type: "Aria", dateAdded: "2023-10-10" },
-    ];
+  const { user, loading } = useUser();
 
-    const favoritePieces = [
-        { stuk: "'Notte giorno faticar'", componist: "Wolfgang Amadeus Mozart", dateAdded: "2023-09-10" },
-        { stuk: "'Nel cor più non mi sento'", componist: "Giuseppe Sarti", dateAdded: "2023-08-25" },
-        { stuk: "'La ci darem la mano'", componist: "Wolfgang Amadeus Mozart", dateAdded: "2023-10-02" },
-        { stuk: "'Caro mio ben'", componist: "Giuseppe Giordani", dateAdded: "2023-09-20" },
-    ];
+  const [favoritePieces, setFavoritePieces] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
+  const [learningPieces, setLearningPieces] = useState([]);
+  const [repertoire, setRepertoire] = useState([]);
 
-    const learningPieces = [
-        { stuk: "'Concone 3'", componist: "Giuseppe Concone", dateAdded: "2023-08-15" },
-        { stuk: "'Ein Mädchen oder Weibchen'", componist: "Wolfgang Amadeus Mozart", dateAdded: "2023-09-05" },
-        { stuk: "'Ave Maria'", componist: "Franz Schubert", dateAdded: "2023-10-01" },
-        { stuk: "'Casta Diva'", componist: "Vincenzo Bellini", dateAdded: "2023-09-30" },
-    ];
+  const [currentFavoritePage, setCurrentFavoritePage] = useState(1);
+  const [currentWishlistPage, setCurrentWishlistPage] = useState(1);
+  const [currentLearningPage, setCurrentLearningPage] = useState(1);
+  const [currentRepertoirePage, setCurrentRepertoirePage] = useState(1);
 
-    const wishlist = [
-        { stuk: "'Requiem'", componist: "Wolfgang Amadeus Mozart", dateAdded: "2023-08-10" },
-        { stuk: "'La Traviata'", componist: "Giuseppe Verdi", dateAdded: "2023-09-25" },
-    ];
+  const [newPieceTitle, setNewPieceTitle] = useState('');
+  const [newPieceComposer, setNewPieceComposer] = useState('');
+  const [newPieceNotes, setNewPieceNotes] = useState('');
 
-    // Helper function to format date as dag-maand-jaar
-    const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        const day = String(date.getDate()).padStart(2, '0'); // Ensure 2 digits
-        const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
-        const year = date.getFullYear();
-        return `${day}-${month}-${year}`;
+  useEffect(() => {
+    if (user) {
+      setFavoritePieces(user.favoritePieces || []);
+      setWishlist(user.wishlist || []);
+      setLearningPieces(user.workingOnPieces || []);
+      setRepertoire(user.repertoire || []);
+    }
+  }, [user]);
+
+  const addPiece = (category, setList, list) => {
+    if (!newPieceTitle || !newPieceComposer) return;
+    const newPiece = {
+      title: newPieceTitle,
+      composer: newPieceComposer,
+      notes: newPieceNotes,
+      dateAdded: new Date().toISOString().split('T')[0]
     };
 
-    // Sort data by dateAdded (newest first)
-    const sortByDateAdded = (data) => {
-        return data.sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));
-    };
+    fetch('http://localhost:8080/api/piece/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...newPiece, category }),
+      credentials: 'include'
+    })
+      .then((res) => res.text())
+      .then(() => {
+        setList([...list, newPiece]);
+        setNewPieceTitle('');
+        setNewPieceComposer('');
+        setNewPieceNotes('');
+      });
+  };
 
-    const itemsPerPage = 5;
-    const [currentRepertoirePage, setCurrentRepertoirePage] = useState(1);
-    const [currentFavoritePage, setCurrentFavoritePage] = useState(1);
-    const [currentLearningPage, setCurrentLearningPage] = useState(1);
-    const [currentWishlistPage, setCurrentWishlistPage] = useState(1);
+  const renderTable = (title, list, currentPage, setCurrentPage, setList, category) => (
+    <div className="table-wrapper">
+      <table className="table">
+        <caption>{title} {user ? user.name : 'Guest'}</caption>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Composer</th>
+            <th>Notes</th>
+            <th>Date Added</th>
+          </tr>
+        </thead>
+        <tbody>
+          {paginate(sortByDateAdded(list), currentPage, itemsPerPage).map((item, index) => (
+            <tr key={index}>
+              <td>{item.title}</td>
+              <td>{item.composer}</td>
+              <td>{item.notes}</td>
+              <td>{formatDate(item.dateAdded)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="add-piece-form">
+        <input
+          type="text"
+          placeholder="Title"
+          value={newPieceTitle}
+          onChange={(e) => setNewPieceTitle(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Composer"
+          value={newPieceComposer}
+          onChange={(e) => setNewPieceComposer(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Notes"
+          value={newPieceNotes}
+          onChange={(e) => setNewPieceNotes(e.target.value)}
+        />
+        <button className="add-piece-btn" onClick={() => addPiece(category, setList, list)}>Add Piece</button>
+      </div>
+      <div className="pagination">
+        <button onClick={() => setCurrentPage(Math.max(currentPage - 1, 1))} disabled={currentPage === 1}>Previous</button>
+        <span>Page {currentPage} of {totalPages(list)}</span>
+        <button onClick={() => setCurrentPage(Math.min(currentPage + 1, totalPages(list)))} disabled={currentPage === totalPages(list)}>Next</button>
+      </div>
+    </div>
+  );
 
-    const paginate = (data, currentPage, itemsPerPage) => {
-        const indexOfLastItem = currentPage * itemsPerPage;
-        const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-        return data.slice(indexOfFirstItem, indexOfLastItem);
-    };
+  if (loading) return <div>Loading...</div>;
 
-    const totalPages = (data) => Math.ceil(data.length / itemsPerPage);
+  return (
+    <div className="mainpage">
+      <div className="header">
+        <h1>My Profile</h1>
+      </div>
+      <img src="src/assets/pfp.png" alt="Profile" className="profile-photo" />
 
-    const nextPage = (setCurrentPage, currentPage, totalPages) => {
-        if (currentPage < totalPages) {
-            setCurrentPage(currentPage + 1);
-        }
-    };
-
-    const prevPage = (setCurrentPage, currentPage) => {
-        if (currentPage > 1) {
-            setCurrentPage(currentPage - 1);
-        }
-    };
-
-    return (
-        <div className="mainpage">
-            <div className="header">
-                <h1>My Profile</h1>
-            </div>
-            <img src="src/assets/pfp.png" alt="Koen Green" className="profile-photo" />
-
-            <div className="table-container">
-                <table className="table">
-                    <caption>Persoonsgegevens</caption>
-                    <tbody>
-                    <tr><td><strong>Voornaam:</strong> Koen</td></tr>
-                    <tr><td><strong>Achternaam:</strong> Green</td></tr>
-                    <tr><td><strong>Email:</strong> koen.green@email.com</td></tr>
-                    <tr><td><strong>Telefoonnummer:</strong> 0612345678</td></tr>
-                    <tr><td><strong>Instrument:</strong> Voice</td></tr>
-                    </tbody>
-                </table>
-
-                {/* Flexbox to display tables side by side */}
-                <div className="tables-flex">
-                    <div className="table-wrapper">
-                        <table className="table">
-                            <caption>Favoriete Stukken</caption>
-                            <thead>
-                            <tr><th>Stuk</th><th>Componist</th><th>Date Added</th></tr>
-                            </thead>
-                            <tbody>
-                            {paginate(sortByDateAdded(favoritePieces), currentFavoritePage, itemsPerPage).map((item, index) => (
-                                <tr key={index}>
-                                    <td>{item.stuk}</td>
-                                    <td>{item.componist}</td>
-                                    <td>{formatDate(item.dateAdded)}</td>
-                                </tr>
-                            ))}
-                            </tbody>
-                        </table>
-
-                        <div className="pagination">
-                            <button onClick={() => prevPage(setCurrentFavoritePage, currentFavoritePage)} disabled={currentFavoritePage === 1}>Previous</button>
-                            <span>Page {currentFavoritePage} of {totalPages(favoritePieces)}</span>
-                            <button onClick={() => nextPage(setCurrentFavoritePage, currentFavoritePage, totalPages(favoritePieces))} disabled={currentFavoritePage === totalPages(favoritePieces)}>Next</button>
-                        </div>
-                    </div>
-
-                    <div className="table-wrapper">
-                        <table className="table">
-                            <caption>Wishlist</caption>
-                            <thead>
-                            <tr><th>Stuk</th><th>Componist</th><th>Date Added</th></tr>
-                            </thead>
-                            <tbody>
-                            {paginate(sortByDateAdded(wishlist), currentWishlistPage, itemsPerPage).map((item, index) => (
-                                <tr key={index}>
-                                    <td>{item.stuk}</td>
-                                    <td>{item.componist}</td>
-                                    <td>{formatDate(item.dateAdded)}</td>
-                                </tr>
-                            ))}
-                            </tbody>
-                        </table>
-
-                        <div className="pagination">
-                            <button onClick={() => prevPage(setCurrentWishlistPage, currentWishlistPage)} disabled={currentWishlistPage === 1}>Previous</button>
-                            <span>Page {currentWishlistPage} of {totalPages(wishlist)}</span>
-                            <button onClick={() => nextPage(setCurrentWishlistPage, currentWishlistPage, totalPages(wishlist))} disabled={currentWishlistPage === totalPages(wishlist)}>Next</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="tables-flex">
-                    <div className="table-wrapper">
-                        <table className="table">
-                            <caption>Momenteel Aan Het Leren</caption>
-                            <thead>
-                            <tr><th>Stuk</th><th>Componist</th><th>Date Added</th></tr>
-                            </thead>
-                            <tbody>
-                            {paginate(sortByDateAdded(learningPieces), currentLearningPage, itemsPerPage).map((item, index) => (
-                                <tr key={index}>
-                                    <td>{item.stuk}</td>
-                                    <td>{item.componist}</td>
-                                    <td>{formatDate(item.dateAdded)}</td>
-                                </tr>
-                            ))}
-                            </tbody>
-                        </table>
-
-                        <div className="pagination">
-                            <button onClick={() => prevPage(setCurrentLearningPage, currentLearningPage)} disabled={currentLearningPage === 1}>Previous</button>
-                            <span>Page {currentLearningPage} of {totalPages(learningPieces)}</span>
-                            <button onClick={() => nextPage(setCurrentLearningPage, currentLearningPage, totalPages(learningPieces))} disabled={currentLearningPage === totalPages(learningPieces)}>Next</button>
-                        </div>
-                    </div>
-
-                    <div className="table-wrapper">
-                        <table className="table">
-                            <caption>Repertoire</caption>
-                            <thead>
-                            <tr><th>Stuk</th><th>Componist</th><th>Type</th><th>Date Added</th></tr>
-                            </thead>
-                            <tbody>
-                            {paginate(sortByDateAdded(repertoireData), currentRepertoirePage, itemsPerPage).map((item, index) => (
-                                <tr key={index}>
-                                    <td>{item.stuk}</td>
-                                    <td>{item.componist}</td>
-                                    <td>{item.type}</td>
-                                    <td>{formatDate(item.dateAdded)}</td>
-                                </tr>
-                            ))}
-                            </tbody>
-                        </table>
-
-                        <div className="pagination">
-                            <button onClick={() => prevPage(setCurrentRepertoirePage, currentRepertoirePage)} disabled={currentRepertoirePage === 1}>Previous</button>
-                            <span>Page {currentRepertoirePage} of {totalPages(repertoireData)}</span>
-                            <button onClick={() => nextPage(setCurrentRepertoirePage, currentRepertoirePage, totalPages(repertoireData))} disabled={currentRepertoirePage === totalPages(repertoireData)}>Next</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+      <div className="table-container">
+        {renderTable('Favorite Pieces', favoritePieces, currentFavoritePage, setCurrentFavoritePage, setFavoritePieces, 'favorite')}
+        {renderTable('Wishlist', wishlist, currentWishlistPage, setCurrentWishlistPage, setWishlist, 'wishlist')}
+        {renderTable('Learning Pieces', learningPieces, currentLearningPage, setCurrentLearningPage, setLearningPieces, 'workingonpieces')}
+        {renderTable('Repertoire', repertoire, currentRepertoirePage, setCurrentRepertoirePage, setRepertoire, 'repertoire')}
+      </div>
+    </div>
+  );
 };
 
 export default AboutPage;

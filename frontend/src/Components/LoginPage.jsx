@@ -27,37 +27,26 @@ const LoginPage = () => {
         setIsLoading(true);
 
         try {
-            // Perform login
             const loginResponse = await axios.post(
                 'http://localhost:8080/api/user/login',
                 { email, password },
                 { withCredentials: true }
             );
 
-            if (loginResponse.data === "Login successful") {
-                // Fetch complete user data after login
-                const userResponse = await axios.get(
-                    'http://localhost:8080/api/user/current',
-                    { withCredentials: true }
-                );
-
-                if (userResponse.data) {
-                    // Update user context with complete user data
-                    login(userResponse.data);
-                    
-                    // Clear form and redirect
-                    setEmail('');
-                    setPassword('');
-                    navigate('/');
-                } else {
-                    setError('Failed to fetch user data after login');
-                }
+            // Handle backend response that includes full user data
+            if (loginResponse.status === 200 && loginResponse.data?.email) {
+                login(loginResponse.data); // Set user in context
+                setEmail('');
+                setPassword('');
+                navigate('/'); // Navigate to homepage
             } else {
-                setError(loginResponse.data || 'Login failed');
+                setError('Login failed: invalid response');
             }
         } catch (error) {
             console.error('Login error:', error);
-            setError(error.response?.data?.message || error.message || 'Login failed. Please try again.');
+            setError(
+                error.response?.data?.message || error.message || 'Login failed. Please try again.'
+            );
         } finally {
             setIsLoading(false);
         }
@@ -74,11 +63,7 @@ const LoginPage = () => {
                     <div className="form-group">
                         <div className="formTitle">Log in to your account</div>
 
-                        {error && (
-                            <div className="error-message">
-                                {error}
-                            </div>
-                        )}
+                        {error && <div className="error-message">{error}</div>}
 
                         <div className="form-group">
                             <label htmlFor="email">Email</label>
@@ -106,11 +91,7 @@ const LoginPage = () => {
                             />
                         </div>
 
-                        <button 
-                            type="submit" 
-                            className="submit-btn"
-                            disabled={isLoading}
-                        >
+                        <button type="submit" className="submit-btn" disabled={isLoading}>
                             {isLoading ? 'Logging in...' : 'Login'}
                         </button>
                     </div>

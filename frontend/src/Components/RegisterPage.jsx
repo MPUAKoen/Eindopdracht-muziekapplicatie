@@ -43,6 +43,7 @@ const RegisterPage = () => {
             setPassword('');
             setConfirmPassword('');
             setInstrument(null);
+            navigate('/login');
 
         } catch (error) {
             const errorMessage = error.response?.data || 'Registration failed';
@@ -114,7 +115,7 @@ const RegisterPage = () => {
                             value={instrument}
                             onChange={handleInstrumentChange}
                         >
-                            <option value={null}>Empty</option>
+                            <option value="Not sure">Not sure</option>
                             <option value="Piano">Piano</option>
                             <option value="Guitar">Guitar</option>
                             <option value="Violin">Violin</option>
