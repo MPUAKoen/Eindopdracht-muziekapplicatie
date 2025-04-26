@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom'; // <-- import Link
 import { useUser } from '../Context/UserContext';
 import '../App.css';
 
@@ -33,12 +33,11 @@ const LoginPage = () => {
                 { withCredentials: true }
             );
 
-            // Handle backend response that includes full user data
             if (loginResponse.status === 200 && loginResponse.data?.email) {
-                login(loginResponse.data); // Set user in context
+                login(loginResponse.data);
                 setEmail('');
                 setPassword('');
-                navigate('/'); // Navigate to homepage
+                navigate('/');
             } else {
                 setError('Login failed: invalid response');
             }
@@ -94,6 +93,13 @@ const LoginPage = () => {
                         <button type="submit" className="submit-btn" disabled={isLoading}>
                             {isLoading ? 'Logging in...' : 'Login'}
                         </button>
+
+                        {/* Add this section */}
+                        <div className="redirect-link" style={{ marginTop: '20px', textAlign: 'center', color:'white' }}>
+                            Don't have an account yet?{' '}
+                            <Link to="/register">Register here</Link>
+                        </div>
+
                     </div>
                 </form>
             </div>

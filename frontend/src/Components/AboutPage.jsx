@@ -114,7 +114,7 @@ const AboutPage = () => {
   ) => (
     <div className="table-wrapper">
       <table className="table">
-        <caption>{tableTitle} {user ? user.name : 'Guest'}</caption>
+        <caption>{tableTitle} </caption>
         <thead>
           <tr>
             <th>Title</th>

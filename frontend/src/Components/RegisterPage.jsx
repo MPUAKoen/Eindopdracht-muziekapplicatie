@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // <-- IMPORT useNavigate
+import { useUser } from '../Context/UserContext'; // <-- IMPORT useUser to save user after registration
 import axios from 'axios';
 import '../App.css';
 
@@ -7,13 +9,16 @@ const RegisterPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [instrument, setInstrument] = useState(null);
+    const [instrument, setInstrument] = useState('');
+
+    const navigate = useNavigate(); // <-- INITIALIZE navigate
+    const { login } = useUser();     // <-- Get login() from context
 
     const handleNameChange = (e) => setName(e.target.value);
     const handleEmailChange = (e) => setEmail(e.target.value);
     const handlePasswordChange = (e) => setPassword(e.target.value);
     const handleConfirmPasswordChange = (e) => setConfirmPassword(e.target.value);
-    const handleInstrumentChange = (e) => setInstrument(e.target.value || null);
+    const handleInstrumentChange = (e) => setInstrument(e.target.value);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -37,17 +42,20 @@ const RegisterPage = () => {
                 withCredentials: true
             });
 
-            alert(response.data);
+            if (response.status === 200) {
+                login(response.data);    // Save the user into context
+                navigate('/');        // Redirect to home page
+            }
+
             setName('');
             setEmail('');
             setPassword('');
             setConfirmPassword('');
-            setInstrument(null);
-            navigate('/login');
+            setInstrument('');
 
         } catch (error) {
-            const errorMessage = error.response?.data || 'Registration failed';
-            alert(errorMessage);
+            console.error('Registration error:', error);
+            alert('Registration failed. Please try again.');
         }
     };
 
@@ -61,6 +69,7 @@ const RegisterPage = () => {
                 <form onSubmit={handleSubmit} className="lesson-form">
                     <div className="form-group">
                         <div className="formTitle">Create an account</div>
+
                         <label htmlFor="name">Name</label>
                         <input
                             type="text"
@@ -70,9 +79,7 @@ const RegisterPage = () => {
                             placeholder="Enter your name"
                             required
                         />
-                    </div>
 
-                    <div className="form-group">
                         <label htmlFor="email">Email</label>
                         <input
                             type="email"
@@ -82,9 +89,7 @@ const RegisterPage = () => {
                             placeholder="Enter your email"
                             required
                         />
-                    </div>
 
-                    <div className="form-group">
                         <label htmlFor="password">Password</label>
                         <input
                             type="password"
@@ -94,9 +99,7 @@ const RegisterPage = () => {
                             placeholder="Enter your password"
                             required
                         />
-                    </div>
 
-                    <div className="form-group">
                         <label htmlFor="confirmPassword">Confirm Password</label>
                         <input
                             type="password"
@@ -106,15 +109,14 @@ const RegisterPage = () => {
                             placeholder="Confirm your password"
                             required
                         />
-                    </div>
 
-                    <div className="form-group">
                         <label htmlFor="instrument">Instrument</label>
                         <select
                             id="instrument"
                             value={instrument}
                             onChange={handleInstrumentChange}
                         >
+                            <option value="">Select Instrument</option>
                             <option value="Not sure">Not sure</option>
                             <option value="Piano">Piano</option>
                             <option value="Guitar">Guitar</option>
@@ -132,9 +134,9 @@ const RegisterPage = () => {
                             <option value="French Horn">French Horn</option>
                             <option value="Tuba">Tuba</option>
                         </select>
-                    </div>
 
-                    <button type="submit" className="submit-btn">Register</button>
+                        <button type="submit" className="submit-btn">Register</button>
+                    </div>
                 </form>
             </div>
         </div>

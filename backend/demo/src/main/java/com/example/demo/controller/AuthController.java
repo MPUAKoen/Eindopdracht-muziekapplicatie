@@ -7,6 +7,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
 import java.util.Optional;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,8 +18,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/user")
@@ -31,6 +31,33 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    // === Register User ===
+    @PostMapping("/register")
+    public ResponseEntity<?> registerUser(@RequestBody RegisterRequest request, HttpServletRequest httpRequest) {
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            return ResponseEntity.badRequest().body("Email is already in use");
+        }
+
+        User newUser = new User();
+        newUser.setName(request.getName());
+        newUser.setEmail(request.getEmail());
+        newUser.setPassword(passwordEncoder.encode(request.getPassword()));
+        newUser.setInstrument(request.getInstrument());
+
+        userRepository.save(newUser);
+        logger.info("User registered successfully");
+
+        // Optional: Auto-login after registration
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                newUser.getEmail(), null, newUser.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        HttpSession session = httpRequest.getSession(true);
+        session.setAttribute("SPRING_SECURITY_CONTEXT", SecurityContextHolder.getContext());
+
+        return ResponseEntity.ok(buildUserResponse(newUser));
+    }
+
+    // === Get Current User ===
     @GetMapping("/current")
     public ResponseEntity<?> getCurrentUser(HttpServletRequest request) {
         System.out.println("=== GET /api/user/current ===");
@@ -66,6 +93,7 @@ public class AuthController {
                 currentUser.getFavoritePieces()));
     }
 
+    // === Login User ===
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         Optional<User> optionalUser = userRepository.findByEmail(request.getEmail());
@@ -91,6 +119,8 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Invalid credentials");
         }
     }
+
+    // === Utility Classes ===
 
     public static class CurrentUserResponse {
         public Long id;
@@ -131,6 +161,25 @@ public class AuthController {
         public void setPassword(String password) {
             this.password = password;
         }
+    }
+
+    public static class RegisterRequest {
+        private String name;
+        private String email;
+        private String password;
+        private String instrument;
+
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
+
+        public String getInstrument() { return instrument; }
+        public void setInstrument(String instrument) { this.instrument = instrument; }
     }
 
     private CurrentUserResponse buildUserResponse(User user) {
