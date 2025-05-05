@@ -48,7 +48,7 @@ public class AuthController {
         userRepository.save(newUser);
         logger.info("User registered successfully");
 
-        // Optional: Auto-login after registration
+        // Auto-login after registration
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 newUser.getEmail(), null, newUser.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -58,7 +58,7 @@ public class AuthController {
         return ResponseEntity.ok(buildUserResponse(newUser));
     }
 
-    // === Toggle User Role (User -> Teacher or Teacher -> User) ===
+    // === Toggle User Role ===
     @PatchMapping("/toggle-role/{userId}")
     public ResponseEntity<?> toggleUserRole(@PathVariable Long userId) {
         Optional<User> userOptional = userRepository.findById(userId);
@@ -76,37 +76,32 @@ public class AuthController {
 
     // === Assign Teacher to Student ===
     @PatchMapping("/assign-teacher/{teacherId}")
-    public ResponseEntity<?> assignTeacher(
-            @PathVariable Long teacherId,
-            Authentication authentication) {
+    public ResponseEntity<?> assignTeacher(@PathVariable Long teacherId, Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
         }
 
         String studentEmail = authentication.getName();
         User student = userRepository.findByEmail(studentEmail)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         User teacher = userRepository.findById(teacherId)
-                .filter(u -> "TEACHER".equalsIgnoreCase(u.getRole()))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid teacher ID"));
+            .filter(u -> "TEACHER".equalsIgnoreCase(u.getRole()))
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid teacher ID"));
 
         student.setTeacher(teacher);
         userRepository.save(student);
 
         logger.info("Assigned teacher {} to student {}", teacher.getId(), student.getId());
-
         return ResponseEntity.ok(buildUserResponse(student));
     }
 
     // === Delete User ===
     @DeleteMapping("/delete/{userId}")
     public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
-        Optional<User> userOptional = userRepository.findById(userId);
-        if (userOptional.isEmpty()) {
+        if (userRepository.findById(userId).isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-
         userRepository.deleteById(userId);
         return ResponseEntity.ok("User deleted successfully");
     }
@@ -128,15 +123,15 @@ public class AuthController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok()
-                .header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate")
-                .header("Pragma", "no-cache")
-                .header("Expires", "0")
-                .body(teachers);
+            .header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate")
+            .header("Pragma", "no-cache")
+            .header("Expires", "0")
+            .body(teachers);
     }
 
     // === Get Current User ===
     @GetMapping("/current")
-    public ResponseEntity<?> getCurrentUser(HttpServletRequest request) {
+    public ResponseEntity<?> getCurrentUser() {
         logger.info("=== GET /api/user/current ===");
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -145,7 +140,7 @@ public class AuthController {
 
         String email = authentication.getName();
         User currentUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         return ResponseEntity.ok(buildUserResponse(currentUser));
     }
@@ -169,32 +164,10 @@ public class AuthController {
         return ResponseEntity.badRequest().body("Invalid credentials");
     }
 
-    // === DTOs and Helper ===
-    public static class CurrentUserResponse {
-        public Long id;
-        public String name;
-        public String email;
-        public String instrument;
-        public List<Piece> workingOnPieces, repertoire, wishlist, favoritePieces;
-        public User teacher;
-
-        public CurrentUserResponse(Long id, String name, String email, String instrument,
-                List<Piece> workingOnPieces, List<Piece> repertoire,
-                List<Piece> wishlist, List<Piece> favoritePieces, User teacher) {
-            this.id = id;
-            this.name = name;
-            this.email = email;
-            this.instrument = instrument;
-            this.workingOnPieces = workingOnPieces;
-            this.repertoire = repertoire;
-            this.wishlist = wishlist;
-            this.favoritePieces = favoritePieces;
-            this.teacher = teacher;
-        }
-    }
-
+    // === DTOs ===
     public static class LoginRequest {
-        private String email, password;
+        private String email;
+        private String password;
         public String getEmail() { return email; }
         public void setEmail(String email) { this.email = email; }
         public String getPassword() { return password; }
@@ -216,17 +189,64 @@ public class AuthController {
         public void setInstrument(String instrument) { this.instrument = instrument; }
     }
 
+    public static class TeacherDto {
+        public Long id;
+        public String name;
+        public String email;
+        public String instrument;
+
+        public TeacherDto(Long id, String name, String email, String instrument) {
+            this.id = id;
+            this.name = name;
+            this.email = email;
+            this.instrument = instrument;
+        }
+    }
+
+    public static class CurrentUserResponse {
+        public Long id;
+        public String name;
+        public String email;
+        public String instrument;
+        public List<Piece> workingOnPieces;
+        public List<Piece> repertoire;
+        public List<Piece> wishlist;
+        public List<Piece> favoritePieces;
+        public TeacherDto teacher;
+
+        public CurrentUserResponse(Long id, String name, String email, String instrument,
+                List<Piece> workingOnPieces, List<Piece> repertoire,
+                List<Piece> wishlist, List<Piece> favoritePieces, TeacherDto teacher) {
+            this.id = id;
+            this.name = name;
+            this.email = email;
+            this.instrument = instrument;
+            this.workingOnPieces = workingOnPieces;
+            this.repertoire = repertoire;
+            this.wishlist = wishlist;
+            this.favoritePieces = favoritePieces;
+            this.teacher = teacher;
+        }
+    }
+
     private CurrentUserResponse buildUserResponse(User user) {
+        TeacherDto teacherDto = null;
+        if (user.getTeacher() != null) {
+            User t = user.getTeacher();
+            teacherDto = new TeacherDto(
+                t.getId(), t.getName(), t.getEmail(), t.getInstrument()
+            );
+        }
         return new CurrentUserResponse(
-                user.getId(),
-                user.getName(),
-                user.getEmail(),
-                user.getInstrument(),
-                user.getWorkingOnPieces(),
-                user.getRepertoire(),
-                user.getWishlist(),
-                user.getFavoritePieces(),
-                user.getTeacher() // newly assigned teacher
+            user.getId(),
+            user.getName(),
+            user.getEmail(),
+            user.getInstrument(),
+            user.getWorkingOnPieces(),
+            user.getRepertoire(),
+            user.getWishlist(),
+            user.getFavoritePieces(),
+            teacherDto
         );
     }
 }

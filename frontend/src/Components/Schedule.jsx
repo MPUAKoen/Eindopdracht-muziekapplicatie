@@ -1,113 +1,131 @@
-import React, { useState } from 'react';
+// src/Schedule.jsx
+import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 import '../App.css';
 
+const API_BASE = 'http://localhost:8080';
+
 const Schedule = () => {
-    const students = [
-        'John Doe',
-        'Jane Smith',
-        'Alice Brown',
-        'Tom White'
-    ];
+  const [students, setStudents] = useState([]);
+  const instruments = ['Piano','Guitar','Violin','Voice','Drums'];
 
-    const instruments = [
-        'Piano',
-        'Guitar',
-        'Violin',
-        'Voice',
-        'Drums'
-    ];
+  const [instrument, setInstrument] = useState('');
+  const [studentId, setStudentId] = useState('');
+  const [lessonDate, setLessonDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [homework, setHomework] = useState('');
+  const [pdfFiles, setPdfFiles] = useState([]);
+  const fileInputRef = useRef(null);
 
-    const [instrument, setInstrument] = useState('');
-    const [student, setStudent] = useState('');
-    const [lessonDate, setLessonDate] = useState('');
-    const [startTime, setStartTime] = useState('');
-    const [endTime, setEndTime] = useState('');
-    const [homework, setHomework] = useState('');
-    const [pdfFiles, setPdfFiles] = useState([]);
+  useEffect(() => {
+    // Fetch all users, then keep only those with role "USER" (i.e. students)
+    axios.get(`${API_BASE}/api/user/all`, { withCredentials: true })
+      .then(res => {
+        const all = res.data;
+        const onlyStudents = all.filter(u => u.role === 'USER');
+        setStudents(onlyStudents);
+      })
+      .catch(err => {
+        console.error('Error fetching users:', err);
+        setStudents([]);
+      });
+  }, []);
 
-    const handleInstrumentChange = (e) => setInstrument(e.target.value);
-    const handleStudentChange = (e) => setStudent(e.target.value);
-    const handleDateChange = (e) => setLessonDate(e.target.value);
-    const handleStartTimeChange = (e) => setStartTime(e.target.value);
-    const handleEndTimeChange = (e) => setEndTime(e.target.value);
-    const handleHomeworkChange = (e) => setHomework(e.target.value);
-    const handleFileChange = (e) => setPdfFiles([...e.target.files]);
+  const handleSubmit = async e => {
+    e.preventDefault();
+    if (!instrument || !studentId || !lessonDate || !startTime || !endTime) {
+      return alert('Please fill in all fields');
+    }
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (!instrument || !student || !lessonDate || !startTime || !endTime) {
-            alert('Please fill in all fields');
-        } else {
-            alert(`Lesson scheduled for ${student} on ${lessonDate} from ${startTime} to ${endTime} for ${instrument}. Homework: ${homework}`);
-            setInstrument('');
-            setStudent('');
-            setLessonDate('');
-            setStartTime('');
-            setEndTime('');
-            setHomework('');
-            setPdfFiles([]);
-        }
-    };
+    const formData = new FormData();
+    formData.append('instrument', instrument);
+    formData.append('studentName', students.find(s => s.id === +studentId)?.name || '');
+    formData.append('lessonDate', lessonDate);
+    formData.append('startTime', startTime);
+    formData.append('endTime', endTime);
+    formData.append('homework', homework);
+    pdfFiles.forEach(file => formData.append('pdfFiles', file));
 
-    return (
-        <div className="mainpage">
-            <div className="header">
-                <h1>Schedule a Lesson</h1>
-            </div>
+    try {
+      await axios.post(
+        `${API_BASE}/api/lesson/add`,
+        formData,
+        { withCredentials: true, headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      alert('Lesson scheduled successfully!');
+      // reset
+      setInstrument(''); setStudentId(''); setLessonDate('');
+      setStartTime(''); setEndTime(''); setHomework(''); setPdfFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (err) {
+      console.error('Scheduling error:', err);
+      alert('Failed to schedule lesson.');
+    }
+  };
 
-            <div className="dashboard">
-                <form onSubmit={handleSubmit} className="lesson-form">
-                    <div className="form-group">
-                        <div className="formTitle">Schedule lesson</div>
-                        <label htmlFor="instrument">Select Instrument</label>
-                        <select id="instrument" value={instrument} onChange={handleInstrumentChange} required>
-                            <option value="">-- Select an Instrument --</option>
-                            {instruments.map((instrumentOption, index) => (
-                                <option key={index} value={instrumentOption}>{instrumentOption}</option>
-                            ))}
-                        </select>
-                    </div>
+  return (
+    <div className="mainpage">
+      <div className="header"><h1>Schedule a Lesson</h1></div>
+      <div className="dashboard">
+        <form onSubmit={handleSubmit} className="lesson-form">
+          <div className="form-group">
+            <label htmlFor="instrument">Instrument</label>
+            <select id="instrument" value={instrument} onChange={e => setInstrument(e.target.value)} required>
+              <option value="">-- Select --</option>
+              {instruments.map(ins => <option key={ins} value={ins}>{ins}</option>)}
+            </select>
+          </div>
 
-                    <div className="form-group">
-                        <label htmlFor="student">Select Student</label>
-                        <select id="student" value={student} onChange={handleStudentChange} required>
-                            <option value="">-- Select a Student --</option>
-                            {students.map((studentOption, index) => (
-                                <option key={index} value={studentOption}>{studentOption}</option>
-                            ))}
-                        </select>
-                    </div>
+          <div className="form-group">
+            <label htmlFor="student">Student</label>
+            <select id="student" value={studentId} onChange={e => setStudentId(e.target.value)} required>
+              <option value="">-- Select --</option>
+              {students.map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.email})
+                </option>
+              ))}
+            </select>
+          </div>
 
-                    <div className="form-group">
-                        <label htmlFor="date">Lesson Date</label>
-                        <input type="date" id="date" value={lessonDate} onChange={handleDateChange} required />
-                    </div>
+          <div className="form-group">
+            <label htmlFor="date">Date</label>
+            <input type="date" id="date" value={lessonDate} onChange={e => setLessonDate(e.target.value)} required/>
+          </div>
 
-                    <div className="form-group">
-                        <label htmlFor="startTime">Start Time</label>
-                        <input type="time" id="startTime" value={startTime} onChange={handleStartTimeChange} required />
-                    </div>
+          <div className="form-group">
+            <label htmlFor="startTime">Start Time</label>
+            <input type="time" id="startTime" value={startTime} onChange={e => setStartTime(e.target.value)} required/>
+          </div>
 
-                    <div className="form-group">
-                        <label htmlFor="endTime">End Time</label>
-                        <input type="time" id="endTime" value={endTime} onChange={handleEndTimeChange} required />
-                    </div>
+          <div className="form-group">
+            <label htmlFor="endTime">End Time</label>
+            <input type="time" id="endTime" value={endTime} onChange={e => setEndTime(e.target.value)} required/>
+          </div>
 
-                    <div className="form-group">
-                        <label htmlFor="homework">Homework</label>
-                        <textarea id="homework" value={homework} onChange={handleHomeworkChange} placeholder="Enter homework details" />
-                    </div>
+          <div className="form-group">
+            <label htmlFor="homework">Homework</label>
+            <textarea id="homework" value={homework} onChange={e => setHomework(e.target.value)} />
+          </div>
 
-                    <div className="form-group">
-                        <label htmlFor="pdfFiles">Upload PDFs</label>
-                        <input type="file" id="pdfFiles" accept="application/pdf" multiple onChange={handleFileChange} />
-                    </div>
+          <div className="form-group">
+            <label htmlFor="pdfFiles">Upload PDFs</label>
+            <input
+              type="file"
+              id="pdfFiles"
+              accept="application/pdf"
+              multiple
+              onChange={e => setPdfFiles(Array.from(e.target.files))}
+              ref={fileInputRef}
+            />
+          </div>
 
-                    <button type="submit" className="submit-btn">Add</button>
-                </form>
-            </div>
-        </div>
-    );
+          <button type="submit" className="submit-btn">Add Lesson</button>
+        </form>
+      </div>
+    </div>
+  );
 };
 
 export default Schedule;

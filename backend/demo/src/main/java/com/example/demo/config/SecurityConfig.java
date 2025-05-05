@@ -24,18 +24,19 @@ import java.util.List;
 public class SecurityConfig {
 
     private static final String[] PUBLIC_ENDPOINTS = {
-            "/api/user/login",
-            "/api/user/register",
-            "/api/user/validate-session",
-            "/api/public/**"
+        "/api/user/login",
+        "/api/user/register",
+        "/api/user/validate-session",
+        "/api/public/**"
     };
 
     private static final String[] AUTHENTICATED_ENDPOINTS = {
-            "/api/user/current",
-            "/api/piece/**",
-            "/api/user/promote/**",
-            "/api/user/delete/**",
-            "/api/private/**"
+        "/api/user/current",
+        "/api/piece/**",
+        "/api/user/promote/**",
+        "/api/user/delete/**",
+        "/api/private/**",
+        "/api/lesson/**"
     };
 
     private final UserRepository userRepository;
@@ -47,23 +48,26 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
-                        .requestMatchers(AUTHENTICATED_ENDPOINTS).authenticated()
-                        .anyRequest().permitAll())
-                .formLogin(form -> form.disable())
-                .rememberMe(remember -> remember
-                        .key("very-secure-remember-me-key")
-                        .tokenValiditySeconds(86400 * 30) // 30 days
-                        .userDetailsService(userDetailsService()))
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
-                        .sessionFixation(sessionFixation -> sessionFixation.migrateSession())
-                        .invalidSessionUrl("/api/user/login")
-                        .maximumSessions(1)
-                        .expiredUrl("/api/user/login"));
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                .requestMatchers(AUTHENTICATED_ENDPOINTS).authenticated()
+                .anyRequest().permitAll()
+            )
+            .formLogin(form -> form.disable())
+            .rememberMe(remember -> remember
+                .key("very-secure-remember-me-key")
+                .tokenValiditySeconds(86400 * 30)
+                .userDetailsService(userDetailsService())
+            )
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
+                .sessionFixation(fix -> fix.migrateSession())
+                .invalidSessionUrl("/api/user/login")
+                .maximumSessions(1)
+                .expiredUrl("/api/user/login")
+            );
 
         return http.build();
     }
@@ -71,17 +75,17 @@ public class SecurityConfig {
     @Bean
     public UserDetailsService userDetailsService() {
         return username -> userRepository.findByEmail(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + username));
+            .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
-        config.setExposedHeaders(List.of("Authorization", "Content-Disposition"));
+        config.setExposedHeaders(List.of("Authorization","Content-Disposition"));
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
