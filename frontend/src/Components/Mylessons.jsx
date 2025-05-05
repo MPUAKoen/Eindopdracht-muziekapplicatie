@@ -1,70 +1,59 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from '../Context/UserContext'; // Import the useUser hook
+import { useUser } from '../Context/UserContext';
 import '../App.css';
 
-const MyLessons = () => {
-    const { user, loading } = useUser(); // Get current user and loading state
-    const [teachers, setTeachers] = useState([]); // State to store available teachers
-    const [selectedTeacher, setSelectedTeacher] = useState(null); // State to store selected teacher
-    const [lessons, setLessons] = useState([/* Example lessons */]);
+// Use an absolute API base URL to avoid dev-server 404 issues
+const API_BASE = 'http://localhost:8080';
 
-    // Fetch teachers when the component mounts and user has no teacher assigned (if user is not a teacher)
+const MyLessons = () => {
+    const { user, loading, login } = useUser();
+    const [teachers, setTeachers] = useState([]);
+    const [selectedTeacher, setSelectedTeacher] = useState('');
+    const [lessons, setLessons] = useState([]);
+
+    // Fetch available teachers if student has no teacher
     useEffect(() => {
-        if (!loading && user && user.role !== 'TEACHER') {
-            // Fetch the list of teachers from backend on port 8080
-            fetch('http://localhost:8080/api/user/teachers', {
-                credentials: 'include' // Include credentials (cookies)
+        if (!loading && user && user.role !== 'TEACHER' && !user.teacher) {
+            fetch(`${API_BASE}/api/user/teachers`, {
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' }
             })
                 .then((res) => {
-                    if (res.status === 204) {
-                        return [];
-                    }
-                    if (!res.ok) {
-                        throw new Error('Failed to fetch teachers');
-                    }
-                    return res.json(); // Parse the response as JSON
+                    if (res.status === 204) return [];
+                    if (!res.ok) throw new Error('Failed to fetch teachers');
+                    return res.json();
                 })
-                .then((data) => {
-                    console.log('Teachers data:', data); // Log the teachers data
-                    setTeachers(data);  // Populate the teachers list
-                })
+                .then((data) => setTeachers(data))
                 .catch((err) => {
                     console.error('Error fetching teachers:', err);
-                    setTeachers([]);  // Clear the teacher list or set an error state
+                    setTeachers([]);
                 });
         }
     }, [user, loading]);
 
-    // Handle teacher selection
-    const handleTeacherSelect = (e) => {
-        setSelectedTeacher(e.target.value);
-    };
+    const handleTeacherSelect = (e) => setSelectedTeacher(e.target.value);
 
-    // Handle assigning the selected teacher to the student
     const handleTeacherAssign = () => {
-        if (selectedTeacher) {
-            fetch(`http://localhost:8080/api/user/assign-teacher/${selectedTeacher}`, {
-                method: 'PATCH',
-                credentials: 'include' // Include credentials (cookies)
+        if (!selectedTeacher) return;
+
+        fetch(`${API_BASE}/api/user/assign-teacher/${selectedTeacher}`, {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        })
+            .then((res) => {
+                if (!res.ok) throw new Error('Failed to assign teacher');
+                return res.json();
             })
-                .then((res) => {
-                    if (!res.ok) {
-                        throw new Error('Failed to assign teacher');
-                    }
-                    return res.json();
-                })
-                .then((data) => {
-                    // Optionally update user context or state here
-                    console.log('Assigned teacher:', data);
-                    setSelectedTeacher(null); // Clear the selection
-                })
-                .catch((err) => {
-                    console.error('Error assigning teacher:', err);
-                });
-        }
+            .then((updatedUser) => {
+                console.log('Assigned teacher:', updatedUser);
+                // Refresh context so UI updates
+                login(updatedUser);
+                setSelectedTeacher('');
+            })
+            .catch((err) => console.error('Error assigning teacher:', err));
     };
 
-    // Show loading message while fetching user data
     if (loading) return <div>Loading...</div>;
 
     return (
@@ -72,10 +61,8 @@ const MyLessons = () => {
             <div className="header">
                 <h1>My Lessons</h1>
             </div>
-
             <div className="dashboard">
-                {/* Check if the user is a teacher */}
-                {user?.role === 'TEACHER' ? (
+                {user.role === 'TEACHER' ? (
                     <table className="table">
                         <caption>Lesson Schedule</caption>
                         <thead>
@@ -107,23 +94,29 @@ const MyLessons = () => {
                             ))}
                         </tbody>
                     </table>
+                ) : user.teacher ? (
+                    <div className="assigned-teacher">
+                        <p>
+                            Your assigned teacher: <strong>{user.teacher.name}</strong> ({user.teacher.instrument || 'No instrument specified'})
+                        </p>
+                    </div>
                 ) : (
                     <div className="no-teacher-message">
                         <p>You don't have a teacher yet. Please select a teacher so they can add lessons for you.</p>
                         <select
-                            value={selectedTeacher || ''}
+                            value={selectedTeacher}
                             onChange={handleTeacherSelect}
                             className="teacher-dropdown"
                         >
                             <option value="">Select a teacher</option>
-                            {teachers && teachers.length > 0 ? (
+                            {teachers.length > 0 ? (
                                 teachers.map((teacher) => (
                                     <option key={teacher.id} value={teacher.id}>
                                         {teacher.name} ({teacher.instrument})
                                     </option>
                                 ))
                             ) : (
-                                <option>No teachers available</option>
+                                <option disabled>No teachers available</option>
                             )}
                         </select>
                         <button onClick={handleTeacherAssign} disabled={!selectedTeacher}>

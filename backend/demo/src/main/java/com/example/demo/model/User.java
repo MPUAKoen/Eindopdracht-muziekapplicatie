@@ -44,13 +44,18 @@ public class User implements UserDetails {
     @ElementCollection(fetch = FetchType.EAGER)
     private List<Piece> favoritePieces;
 
-    // Constructors, getters and setters
+    // Relationship to a teacher (another User)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "teacher_id")
+    private User teacher;
 
+    // Constructors
     public User() {
     }
 
     public User(String name, String email, String password, String role, String instrument,
-            List<Piece> workingOnPieces, List<Piece> repertoire, List<Piece> wishlist, List<Piece> favoritePieces) {
+                List<Piece> workingOnPieces, List<Piece> repertoire,
+                List<Piece> wishlist, List<Piece> favoritePieces, User teacher) {
         this.name = name;
         this.email = email;
         this.password = password;
@@ -60,8 +65,10 @@ public class User implements UserDetails {
         this.repertoire = repertoire;
         this.wishlist = wishlist;
         this.favoritePieces = favoritePieces;
+        this.teacher = teacher;
     }
 
+    // Getters and setters
     public Long getId() {
         return id;
     }
@@ -69,8 +76,6 @@ public class User implements UserDetails {
     public void setId(Long id) {
         this.id = id;
     }
-
-    // name, email, password, role, instrument getters/setters…
 
     public String getName() {
         return name;
@@ -145,8 +150,15 @@ public class User implements UserDetails {
         this.favoritePieces = favoritePieces;
     }
 
-    // UserDetails methods
+    public User getTeacher() {
+        return teacher;
+    }
 
+    public void setTeacher(User teacher) {
+        this.teacher = teacher;
+    }
+
+    // UserDetails methods
     @Override
     public List<GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + this.role));

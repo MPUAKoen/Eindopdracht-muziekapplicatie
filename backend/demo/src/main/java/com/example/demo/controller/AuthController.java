@@ -5,19 +5,20 @@ import com.example.demo.model.User;
 import com.example.demo.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
-
 import java.util.Optional;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/user")
@@ -73,6 +74,31 @@ public class AuthController {
         return ResponseEntity.ok("User role updated to " + newRole);
     }
 
+    // === Assign Teacher to Student ===
+    @PatchMapping("/assign-teacher/{teacherId}")
+    public ResponseEntity<?> assignTeacher(
+            @PathVariable Long teacherId,
+            Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
+        }
+
+        String studentEmail = authentication.getName();
+        User student = userRepository.findByEmail(studentEmail)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        User teacher = userRepository.findById(teacherId)
+                .filter(u -> "TEACHER".equalsIgnoreCase(u.getRole()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid teacher ID"));
+
+        student.setTeacher(teacher);
+        userRepository.save(student);
+
+        logger.info("Assigned teacher {} to student {}", teacher.getId(), student.getId());
+
+        return ResponseEntity.ok(buildUserResponse(student));
+    }
+
     // === Delete User ===
     @DeleteMapping("/delete/{userId}")
     public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
@@ -95,25 +121,17 @@ public class AuthController {
     // === Get All Teachers ===
     @GetMapping("/teachers")
     public ResponseEntity<List<User>> getTeachers() {
-        // Log the request to ensure the method is being called
-        logger.info("Fetching teachers...");
-
-        // Fetch users with the role "TEACHER"
+        logger.info("Fetching teachers.");
         List<User> teachers = userRepository.findByRole("TEACHER");
-
-        // Log the result to check if it's populated correctly
-        logger.info("Teachers found: " + teachers.size());
-
+        logger.info("Teachers found: {}", teachers.size());
         if (teachers.isEmpty()) {
-            return ResponseEntity.noContent().build(); // No teachers found
+            return ResponseEntity.noContent().build();
         }
-
-        // Add headers to prevent caching of this response
         return ResponseEntity.ok()
                 .header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate")
                 .header("Pragma", "no-cache")
-                .header("Expires", "0") // Ensure the response is not cached
-                .body(teachers); // Return the list of teachers
+                .header("Expires", "0")
+                .body(teachers);
     }
 
     // === Get Current User ===
@@ -121,76 +139,48 @@ public class AuthController {
     public ResponseEntity<?> getCurrentUser(HttpServletRequest request) {
         logger.info("=== GET /api/user/current ===");
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        logger.info("Authentication: " + authentication);
-        logger.info("Principal: " + (authentication != null ? authentication.getPrincipal() : "null"));
-
         if (authentication == null || !authentication.isAuthenticated()) {
-            return ResponseEntity.status(401).body("User not authenticated");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
         }
 
-        Object principal = authentication.getPrincipal();
-        User currentUser = null;
+        String email = authentication.getName();
+        User currentUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        if (principal instanceof User) {
-            currentUser = (User) principal;
-        } else if (principal instanceof String) {
-            currentUser = userRepository.findByEmail((String) principal).orElse(null);
-        }
-
-        if (currentUser == null) {
-            return ResponseEntity.status(401).body("User not found");
-        }
-
-        return ResponseEntity.ok(new CurrentUserResponse(
-                currentUser.getId(),
-                currentUser.getName(),
-                currentUser.getEmail(),
-                currentUser.getInstrument(),
-                currentUser.getWorkingOnPieces(),
-                currentUser.getRepertoire(),
-                currentUser.getWishlist(),
-                currentUser.getFavoritePieces()));
+        return ResponseEntity.ok(buildUserResponse(currentUser));
     }
 
     // === Login User ===
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         Optional<User> optionalUser = userRepository.findByEmail(request.getEmail());
-
         if (optionalUser.isPresent()) {
             User user = optionalUser.get();
-
             if (passwordEncoder.matches(request.getPassword(), user.getPassword())) {
                 Authentication authentication = new UsernamePasswordAuthenticationToken(
                         user.getEmail(), null, user.getAuthorities());
-
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 HttpSession session = httpRequest.getSession(true);
                 session.setAttribute("SPRING_SECURITY_CONTEXT", SecurityContextHolder.getContext());
-
                 logger.info("User logged in successfully");
-
                 return ResponseEntity.ok(buildUserResponse(user));
-            } else {
-                return ResponseEntity.badRequest().body("Invalid credentials");
             }
-        } else {
-            return ResponseEntity.badRequest().body("Invalid credentials");
         }
+        return ResponseEntity.badRequest().body("Invalid credentials");
     }
 
-    // === Utility Classes ===
-
+    // === DTOs and Helper ===
     public static class CurrentUserResponse {
         public Long id;
         public String name;
         public String email;
         public String instrument;
         public List<Piece> workingOnPieces, repertoire, wishlist, favoritePieces;
+        public User teacher;
 
         public CurrentUserResponse(Long id, String name, String email, String instrument,
                 List<Piece> workingOnPieces, List<Piece> repertoire,
-                List<Piece> wishlist, List<Piece> favoritePieces) {
+                List<Piece> wishlist, List<Piece> favoritePieces, User teacher) {
             this.id = id;
             this.name = name;
             this.email = email;
@@ -199,27 +189,16 @@ public class AuthController {
             this.repertoire = repertoire;
             this.wishlist = wishlist;
             this.favoritePieces = favoritePieces;
+            this.teacher = teacher;
         }
     }
 
     public static class LoginRequest {
         private String email, password;
-
-        public String getEmail() {
-            return email;
-        }
-
-        public void setEmail(String email) {
-            this.email = email;
-        }
-
-        public String getPassword() {
-            return password;
-        }
-
-        public void setPassword(String password) {
-            this.password = password;
-        }
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
     }
 
     public static class RegisterRequest {
@@ -227,16 +206,12 @@ public class AuthController {
         private String email;
         private String password;
         private String instrument;
-
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
-
         public String getEmail() { return email; }
         public void setEmail(String email) { this.email = email; }
-
         public String getPassword() { return password; }
         public void setPassword(String password) { this.password = password; }
-
         public String getInstrument() { return instrument; }
         public void setInstrument(String instrument) { this.instrument = instrument; }
     }
@@ -250,6 +225,8 @@ public class AuthController {
                 user.getWorkingOnPieces(),
                 user.getRepertoire(),
                 user.getWishlist(),
-                user.getFavoritePieces());
+                user.getFavoritePieces(),
+                user.getTeacher() // newly assigned teacher
+        );
     }
 }
