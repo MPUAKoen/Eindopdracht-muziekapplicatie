@@ -1,12 +1,8 @@
-// src/Components/AboutPage.jsx
-
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../Context/UserContext';
 import '../App.css';
 
 const sortByDateAdded = (data) => {
-  // If pieces include a dateAdded attribute, sort them.
-  // Otherwise return the data as is.
   return data.sort((a, b) => {
     if (a.dateAdded && b.dateAdded) {
       return new Date(b.dateAdded) - new Date(a.dateAdded);
@@ -62,7 +58,6 @@ const AboutPage = () => {
     }
   }, [user]);
 
-  // Function to add a new piece via the API
   const addPiece = (category, setList, list, title, composer, notes, resetFields) => {
     if (!title || !composer) return;
 
@@ -82,9 +77,7 @@ const AboutPage = () => {
       .catch(error => console.error("Error adding piece:", error));
   };
 
-  // Function to delete a piece from a category using the delete API
   const handleDeletePiece = (category, piece, list, setList) => {
-    // The backend delete endpoint expects a JSON payload with keys: title, composer, notes, category.
     fetch('http://localhost:8080/api/piece/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -98,7 +91,6 @@ const AboutPage = () => {
     })
       .then((res) => res.text())
       .then(() => {
-        // Filter out the piece that matches the criteria from the list.
         const updatedList = list.filter(
           (p) => p.title !== piece.title || p.composer !== piece.composer || p.notes !== piece.notes
         );
@@ -107,14 +99,15 @@ const AboutPage = () => {
       .catch(error => console.error("Error deleting piece:", error));
   };
 
-  // Render function for each category table that includes an "Actions" column with a delete button
   const renderTable = (
     tableTitle, list, currentPage, setCurrentPage, setList, category,
     inputTitle, setInputTitle, inputComposer, setInputComposer, inputNotes, setInputNotes
   ) => (
     <div className="table-wrapper">
-      <table className="table">
-        <caption>{tableTitle} </caption>
+      <table className="table
+      
+      ">
+        <caption>{tableTitle}</caption>
         <thead>
           <tr>
             <th>Title</th>
@@ -204,62 +197,66 @@ const AboutPage = () => {
       <img src="src/assets/pfp.png" alt="Profile" className="profile-photo" />
 
       <div className="table-container">
-        {renderTable(
-          'Favorite Pieces',
-          favoritePieces,
-          currentFavoritePage,
-          setCurrentFavoritePage,
-          setFavoritePieces,
-          'favorite',
-          favoriteTitle,
-          setFavoriteTitle,
-          favoriteComposer,
-          setFavoriteComposer,
-          favoriteNotes,
-          setFavoriteNotes
-        )}
-        {renderTable(
-          'Wishlist',
-          wishlist,
-          currentWishlistPage,
-          setCurrentWishlistPage,
-          setWishlist,
-          'wishlist',
-          wishlistTitle,
-          setWishlistTitle,
-          wishlistComposer,
-          setWishlistComposer,
-          wishlistNotes,
-          setWishlistNotes
-        )}
-        {renderTable(
-          'Learning Pieces',
-          learningPieces,
-          currentLearningPage,
-          setCurrentLearningPage,
-          setLearningPieces,
-          'workingonpieces',
-          learningTitle,
-          setLearningTitle,
-          learningComposer,
-          setLearningComposer,
-          learningNotes,
-          setLearningNotes
-        )}
-        {renderTable(
-          'Repertoire',
-          repertoire,
-          currentRepertoirePage,
-          setCurrentRepertoirePage,
-          setRepertoire,
-          'repertoire',
-          repertoireTitle,
-          setRepertoireTitle,
-          repertoireComposer,
-          setRepertoireComposer,
-          repertoireNotes,
-          setRepertoireNotes
-        )}
+        <div className="tables-row">
+          {renderTable(
+            'Favorite Pieces',
+            favoritePieces,
+            currentFavoritePage,
+            setCurrentFavoritePage,
+            setFavoritePieces,
+            'favorite',
+            favoriteTitle,
+            setFavoriteTitle,
+            favoriteComposer,
+            setFavoriteComposer,
+            favoriteNotes,
+            setFavoriteNotes
+          )}
+          {renderTable(
+            'Wishlist',
+            wishlist,
+            currentWishlistPage,
+            setCurrentWishlistPage,
+            setWishlist,
+            'wishlist',
+            wishlistTitle,
+            setWishlistTitle,
+            wishlistComposer,
+            setWishlistComposer,
+            wishlistNotes,
+            setWishlistNotes
+          )}
+        </div>
+        <div className="tables-row">
+          {renderTable(
+            'Learning Pieces',
+            learningPieces,
+            currentLearningPage,
+            setCurrentLearningPage,
+            setLearningPieces,
+            'workingonpieces',
+            learningTitle,
+            setLearningTitle,
+            learningComposer,
+            setLearningComposer,
+            learningNotes,
+            setLearningNotes
+          )}
+          {renderTable(
+            'Repertoire',
+            repertoire,
+            currentRepertoirePage,
+            setCurrentRepertoirePage,
+            setRepertoire,
+            'repertoire',
+            repertoireTitle,
+            setRepertoireTitle,
+            repertoireComposer,
+            setRepertoireComposer,
+            repertoireNotes,
+            setRepertoireNotes
+          )}
+        </div>
       </div>
     </div>
   );

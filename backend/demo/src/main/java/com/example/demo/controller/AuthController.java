@@ -57,13 +57,72 @@ public class AuthController {
         return ResponseEntity.ok(buildUserResponse(newUser));
     }
 
+    // === Toggle User Role (User -> Teacher or Teacher -> User) ===
+    @PatchMapping("/toggle-role/{userId}")
+    public ResponseEntity<?> toggleUserRole(@PathVariable Long userId) {
+        Optional<User> userOptional = userRepository.findById(userId);
+        if (userOptional.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        User user = userOptional.get();
+        String newRole = user.getRole().equalsIgnoreCase("TEACHER") ? "USER" : "TEACHER";
+        user.setRole(newRole);
+        userRepository.save(user);
+
+        return ResponseEntity.ok("User role updated to " + newRole);
+    }
+
+    // === Delete User ===
+    @DeleteMapping("/delete/{userId}")
+    public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
+        Optional<User> userOptional = userRepository.findById(userId);
+        if (userOptional.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        userRepository.deleteById(userId);
+        return ResponseEntity.ok("User deleted successfully");
+    }
+
+    // === Get All Users ===
+    @GetMapping("/all")
+    public ResponseEntity<List<User>> getAllUsers() {
+        List<User> users = userRepository.findAll();
+        return ResponseEntity.ok(users);
+    }
+
+    // === Get All Teachers ===
+    @GetMapping("/teachers")
+    public ResponseEntity<List<User>> getTeachers() {
+        // Log the request to ensure the method is being called
+        logger.info("Fetching teachers...");
+
+        // Fetch users with the role "TEACHER"
+        List<User> teachers = userRepository.findByRole("TEACHER");
+
+        // Log the result to check if it's populated correctly
+        logger.info("Teachers found: " + teachers.size());
+
+        if (teachers.isEmpty()) {
+            return ResponseEntity.noContent().build(); // No teachers found
+        }
+
+        // Add headers to prevent caching of this response
+        return ResponseEntity.ok()
+                .header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate")
+                .header("Pragma", "no-cache")
+                .header("Expires", "0") // Ensure the response is not cached
+                .body(teachers); // Return the list of teachers
+    }
+
     // === Get Current User ===
     @GetMapping("/current")
     public ResponseEntity<?> getCurrentUser(HttpServletRequest request) {
-        System.out.println("=== GET /api/user/current ===");
+        logger.info("=== GET /api/user/current ===");
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Principal: " + (authentication != null ? authentication.getPrincipal() : "null"));
+        logger.info("Authentication: " + authentication);
+        logger.info("Principal: " + (authentication != null ? authentication.getPrincipal() : "null"));
 
         if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(401).body("User not authenticated");

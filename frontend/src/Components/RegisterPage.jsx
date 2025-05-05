@@ -55,7 +55,7 @@ const RegisterPage = () => {
 
         } catch (error) {
             console.error('Registration error:', error);
-            alert('Registration failed. Please try again.');
+            alert('You already have an account!');
         }
     };
 

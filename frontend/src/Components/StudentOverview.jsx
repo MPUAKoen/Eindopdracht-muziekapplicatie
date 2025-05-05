@@ -1,62 +1,107 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import '../App.css';
 
 const StudentOverview = () => {
+    const [students, setStudents] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchStudents = () => {
+        fetch('http://localhost:8080/api/user/all', { credentials: 'include' })
+            .then(res => res.json())
+            .then(data => {
+                setStudents(data);
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error("Error fetching students:", err);
+                setLoading(false);
+            });
+    };
+
+    useEffect(() => {
+        fetchStudents();
+    }, []);
+
+    const toggleUserRole = (userId) => {
+        fetch(`http://localhost:8080/api/user/toggle-role/${userId}`, {
+            method: 'PATCH',
+            credentials: 'include'
+        })
+            .then(res => {
+                if (res.ok) {
+                    fetchStudents(); // Refresh list
+                } else {
+                    alert("Failed to update user role.");
+                }
+            })
+            .catch(err => console.error("Toggle role error:", err));
+    };
+
+    const deleteUser = (userId) => {
+        if (!window.confirm("Are you sure you want to delete this user?")) return;
+
+        fetch(`http://localhost:8080/api/user/delete/${userId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        })
+            .then(res => {
+                if (res.ok) {
+                    fetchStudents(); // Refresh list
+                } else {
+                    alert("Failed to delete user.");
+                }
+            })
+            .catch(err => console.error("Delete error:", err));
+    };
+
+    if (loading) return <div>Loading...</div>;
+
     return (
         <div className="app-container">
-
-            {/* Main Content */}
             <div className="mainpage">
                 <div className="header">
-                    <h1>Student Overview</h1>
+                    <h1>Admin Dashboard</h1>
                 </div>
 
-                {/* Student Table */}
-                <div className="table-container ">
+                <div className="table-container">
                     <table className="table">
-                        <caption>Students</caption>
+                        <caption>Users</caption>
                         <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Instrument</th>
-                            <th>Progress</th>
-                            <th>Last Lesson</th>
-                        </tr>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Instrument</th>
+                                <th>Role</th>
+                                <th>Actions</th>
+                            </tr>
                         </thead>
                         <tbody>
-                        <tr>
-                            <td>Koen Green</td>
-                            <td>koen.green@email.com</td>
-                            <td>Voice</td>
-                            <td>85%</td>
-                            <td>2023-10-15</td>
-                        </tr>
-                        <tr>
-                            <td>Jane Doe</td>
-                            <td>jane.doe@email.com</td>
-                            <td>Piano</td>
-                            <td>70%</td>
-                            <td>2023-10-10</td>
-                        </tr>
-                        <tr>
-                            <td>John Smith</td>
-                            <td>john.smith@email.com</td>
-                            <td>Guitar</td>
-                            <td>90%</td>
-                            <td>2023-10-12</td>
-                        </tr>
-                        <tr>
-                            <td>Emily White</td>
-                            <td>emily.white@email.com</td>
-                            <td>Violin</td>
-                            <td>65%</td>
-                            <td>2023-10-08</td>
-                        </tr>
+                            {students.map((student, index) => (
+                                <tr key={index}>
+                                    <td>{student.name}</td>
+                                    <td>{student.email}</td>
+                                    <td>{student.instrument || 'N/A'}</td>  
+                                    <td>{student.role}</td>
+                                    <td>
+                                        <button onClick={() => toggleUserRole(student.id)}>
+                                            {student.role === 'TEACHER' ? 'Demote to Student' : 'Promote to Teacher'}
+                                        </button>
+                                        <button
+                                            onClick={() => deleteUser(student.id)}
+                                            style={{
+                                                marginLeft: '8px',
+                                                backgroundColor: 'red',
+                                                color: 'white'
+                                            }}
+                                        >
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
 
-                    {/* Pagination */}
                     <div className="pagination">
                         <button disabled>Previous</button>
                         <span>Page 1 of 1</span>

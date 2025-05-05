@@ -33,6 +33,8 @@ public class SecurityConfig {
     private static final String[] AUTHENTICATED_ENDPOINTS = {
             "/api/user/current",
             "/api/piece/**",
+            "/api/user/promote/**",
+            "/api/user/delete/**",
             "/api/private/**"
     };
 
