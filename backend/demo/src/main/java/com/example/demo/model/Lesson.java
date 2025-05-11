@@ -9,13 +9,20 @@ import java.util.List;
 @Entity
 @Table(name = "lessons")
 public class Lesson {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String instrument;
-    private String studentName;
-    private String teacherName;
+
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "student_id", nullable = false)
+    private User student;
+
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "teacher_id", nullable = false)
+    private User teacher;
 
     private LocalDate lessonDate;
     private LocalTime startTime;
@@ -29,7 +36,8 @@ public class Lesson {
     @Column(name = "filename")
     private List<String> pdfFileNames;
 
-    public Lesson() {}
+    public Lesson() {
+    }
 
     public Long getId() {
         return id;
@@ -47,20 +55,20 @@ public class Lesson {
         this.instrument = instrument;
     }
 
-    public String getStudentName() {
-        return studentName;
+    public User getStudent() {
+        return student;
     }
 
-    public void setStudentName(String studentName) {
-        this.studentName = studentName;
+    public void setStudent(User student) {
+        this.student = student;
     }
 
-    public String getTeacherName() {
-        return teacherName;
+    public User getTeacher() {
+        return teacher;
     }
 
-    public void setTeacherName(String teacherName) {
-        this.teacherName = teacherName;
+    public void setTeacher(User teacher) {
+        this.teacher = teacher;
     }
 
     public LocalDate getLessonDate() {

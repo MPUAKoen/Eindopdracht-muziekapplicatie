@@ -28,39 +28,45 @@ const Schedule = () => {
       return;
     }
 
-    axios.get(`${API_BASE}/api/user/my-students`, { withCredentials: true })
-      .then(res => setStudents(res.data))
-      .catch(err => {
+    axios
+      .get(`${API_BASE}/api/user/my-students`, { withCredentials: true })
+      .then((res) => setStudents(res.data))
+      .catch((err) => {
         console.error('Error fetching my students:', err);
         setStudents([]);
       });
   }, [user, loading]);
 
-  const handleSubmit = async e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!instrument || !studentId || !lessonDate || !startTime || !endTime) {
       alert('Please fill in all required fields');
       return;
     }
 
-    const student = students.find(s => s.id === parseInt(studentId, 10));
     const formData = new FormData();
     formData.append('instrument', instrument);
-    formData.append('studentName', student.name);
+    formData.append('studentId', studentId);        // ← send ID, not name
     formData.append('lessonDate', lessonDate);
     formData.append('startTime', startTime);
     formData.append('endTime', endTime);
     formData.append('homework', homework);
-    pdfFiles.forEach(file => formData.append('pdfFiles', file));
+    pdfFiles.forEach((file) => formData.append('pdfFiles', file));
 
     try {
       await axios.post(`${API_BASE}/api/lesson/add`, formData, {
         withCredentials: true,
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
       alert('Lesson scheduled successfully!');
-      setInstrument(''); setStudentId(''); setLessonDate('');
-      setStartTime(''); setEndTime(''); setHomework(''); setPdfFiles([]);
+      setInstrument('');
+      setStudentId('');
+      setLessonDate('');
+      setStartTime('');
+      setEndTime('');
+      setHomework('');
+      setPdfFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err) {
       console.error('Scheduling error:', err);
@@ -68,14 +74,15 @@ const Schedule = () => {
     }
   };
 
-  // Show loader while verifying session
   if (loading) {
     return <div>Loading...</div>;
   }
 
   return (
     <div className="mainpage">
-      <div className="header"><h1>Schedule a Lesson</h1></div>
+      <div className="header">
+        <h1>Schedule a Lesson</h1>
+      </div>
       <div className="dashboard">
         {user.role !== 'TEACHER' ? (
           <p style={{ color: 'red' }}>Only teachers can schedule lessons.</p>
@@ -88,12 +95,14 @@ const Schedule = () => {
               <select
                 id="instrument"
                 value={instrument}
-                onChange={e => setInstrument(e.target.value)}
+                onChange={(e) => setInstrument(e.target.value)}
                 required
               >
                 <option value="">-- Select --</option>
-                {instruments.map(ins => (
-                  <option key={ins} value={ins}>{ins}</option>
+                {instruments.map((ins) => (
+                  <option key={ins} value={ins}>
+                    {ins}
+                  </option>
                 ))}
               </select>
             </div>
@@ -103,11 +112,11 @@ const Schedule = () => {
               <select
                 id="student"
                 value={studentId}
-                onChange={e => setStudentId(e.target.value)}
+                onChange={(e) => setStudentId(e.target.value)}
                 required
               >
                 <option value="">-- Select --</option>
-                {students.map(s => (
+                {students.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name} ({s.email})
                   </option>
@@ -121,7 +130,7 @@ const Schedule = () => {
                 type="date"
                 id="date"
                 value={lessonDate}
-                onChange={e => setLessonDate(e.target.value)}
+                onChange={(e) => setLessonDate(e.target.value)}
                 required
               />
             </div>
@@ -132,7 +141,7 @@ const Schedule = () => {
                 type="time"
                 id="startTime"
                 value={startTime}
-                onChange={e => setStartTime(e.target.value)}
+                onChange={(e) => setStartTime(e.target.value)}
                 required
               />
             </div>
@@ -143,7 +152,7 @@ const Schedule = () => {
                 type="time"
                 id="endTime"
                 value={endTime}
-                onChange={e => setEndTime(e.target.value)}
+                onChange={(e) => setEndTime(e.target.value)}
                 required
               />
             </div>
@@ -153,7 +162,7 @@ const Schedule = () => {
               <textarea
                 id="homework"
                 value={homework}
-                onChange={e => setHomework(e.target.value)}
+                onChange={(e) => setHomework(e.target.value)}
               />
             </div>
 
@@ -164,7 +173,7 @@ const Schedule = () => {
                 id="pdfFiles"
                 accept="application/pdf"
                 multiple
-                onChange={e => setPdfFiles(Array.from(e.target.files))}
+                onChange={(e) => setPdfFiles(Array.from(e.target.files))}
                 ref={fileInputRef}
               />
             </div>
