@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -113,12 +114,34 @@ public class AuthController {
         return ResponseEntity.ok(users);
     }
 
+    // === Get My Students (Assigned to Logged-In Teacher) ===
+    @GetMapping("/my-students")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<List<User>> getMyStudents(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String teacherEmail = authentication.getName();
+        Optional<User> teacherOpt = userRepository.findByEmail(teacherEmail);
+        if (teacherOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+
+        User teacher = teacherOpt.get();
+        List<User> students = userRepository.findAll().stream()
+            .filter(u -> u.getRole().equalsIgnoreCase("USER"))
+            .filter(u -> u.getTeacher() != null && u.getTeacher().getId().equals(teacher.getId()))
+            .toList();
+
+        return ResponseEntity.ok(students);
+    }
+
     // === Get All Teachers ===
     @GetMapping("/teachers")
     public ResponseEntity<List<User>> getTeachers() {
         logger.info("Fetching teachers.");
         List<User> teachers = userRepository.findByRole("TEACHER");
-        logger.info("Teachers found: {}", teachers.size());
         if (teachers.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
@@ -165,6 +188,7 @@ public class AuthController {
     }
 
     // === DTOs ===
+
     public static class LoginRequest {
         private String email;
         private String password;
@@ -208,19 +232,30 @@ public class AuthController {
         public String name;
         public String email;
         public String instrument;
+        public String role;                    // <— added field
         public List<Piece> workingOnPieces;
         public List<Piece> repertoire;
         public List<Piece> wishlist;
         public List<Piece> favoritePieces;
         public TeacherDto teacher;
 
-        public CurrentUserResponse(Long id, String name, String email, String instrument,
-                List<Piece> workingOnPieces, List<Piece> repertoire,
-                List<Piece> wishlist, List<Piece> favoritePieces, TeacherDto teacher) {
+        public CurrentUserResponse(
+                Long id,
+                String name,
+                String email,
+                String instrument,
+                String role,                    // <— accept in ctor
+                List<Piece> workingOnPieces,
+                List<Piece> repertoire,
+                List<Piece> wishlist,
+                List<Piece> favoritePieces,
+                TeacherDto teacher
+        ) {
             this.id = id;
             this.name = name;
             this.email = email;
             this.instrument = instrument;
+            this.role = role;               // <— assign here
             this.workingOnPieces = workingOnPieces;
             this.repertoire = repertoire;
             this.wishlist = wishlist;
@@ -242,6 +277,7 @@ public class AuthController {
             user.getName(),
             user.getEmail(),
             user.getInstrument(),
+            user.getRole(),                   // <— pass the role
             user.getWorkingOnPieces(),
             user.getRepertoire(),
             user.getWishlist(),

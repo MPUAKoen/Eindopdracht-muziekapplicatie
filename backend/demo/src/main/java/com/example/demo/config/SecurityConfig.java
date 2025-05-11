@@ -1,3 +1,4 @@
+// src/main/java/com/example/demo/config/SecurityConfig.java
 package com.example.demo.config;
 
 import com.example.demo.repository.UserRepository;
@@ -89,7 +90,7 @@ public class SecurityConfig {
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
+        source.registerCorsConfiguration("/**", config);  // ← apply to all paths
         return source;
     }
 
