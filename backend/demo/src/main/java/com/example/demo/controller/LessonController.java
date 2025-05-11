@@ -51,22 +51,17 @@ public class LessonController {
             @RequestParam(required = false) String homework,
             @RequestParam(required = false) List<MultipartFile> pdfFiles,
             Authentication authentication) {
-        // Lookup teacher by email (principal)
         User teacher = userRepo.findByEmail(authentication.getName())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Teacher not found"));
-
-        // Lookup student by ID
         User student = userRepo.findById(studentId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Student not found"));
 
-        // Store uploaded PDFs (if any)
         List<String> filenames = (pdfFiles != null)
                 ? storage.storeFiles(pdfFiles)
                 : List.of();
 
-        // Build and save lesson
         Lesson lesson = new Lesson();
         lesson.setInstrument(instrument);
         lesson.setTeacher(teacher);
@@ -83,8 +78,8 @@ public class LessonController {
     /** Teachers view all lessons they’ve scheduled */
     @GetMapping("/teacher")
     @PreAuthorize("hasRole('TEACHER')")
-    public List<Lesson> getByTeacher(Authentication authentication) {
-        User teacher = userRepo.findByEmail(authentication.getName())
+    public List<Lesson> getByTeacher(Authentication auth) {
+        User teacher = userRepo.findByEmail(auth.getName())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Teacher not found"));
         return lessonRepo.findByTeacher(teacher);
@@ -93,8 +88,8 @@ public class LessonController {
     /** Students view their own lessons */
     @GetMapping("/student")
     @PreAuthorize("isAuthenticated()")
-    public List<Lesson> getByStudent(Authentication authentication) {
-        User student = userRepo.findByEmail(authentication.getName())
+    public List<Lesson> getByStudent(Authentication auth) {
+        User student = userRepo.findByEmail(auth.getName())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Student not found"));
         return lessonRepo.findByStudent(student);
@@ -112,5 +107,18 @@ public class LessonController {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(resource);
+    }
+
+    /** --- NEW: Fetch all lessons and keep only those for the current user --- */
+    @GetMapping("/all")
+    @PreAuthorize("isAuthenticated()")
+    public List<Lesson> getAllForCurrent(Authentication auth) {
+        User me = userRepo.findByEmail(auth.getName())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found"));
+        return lessonRepo.findAll().stream()
+                .filter(l -> l.getStudent().getId().equals(me.getId())
+                        || l.getTeacher().getId().equals(me.getId()))
+                .toList();
     }
 }

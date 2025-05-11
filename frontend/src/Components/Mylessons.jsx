@@ -5,14 +5,26 @@ import '../App.css';
 
 const API_BASE = 'http://localhost:8080';
 
-const MyLessons = () => {
+export default function MyLessons() {
   const { user, loading, login } = useUser();
   const [teachers, setTeachers] = useState([]);
   const [selectedTeacher, setSelectedTeacher] = useState('');
-  const [lessons, setLessons] = useState([]);
-  const [teacherLessons, setTeacherLessons] = useState([]);
+  const [myLessons, setMyLessons] = useState([]);
 
-  // Fetch available teachers (student-only)
+  // 1) Fetch all lessons for current user (server filters by student OR teacher)
+  useEffect(() => {
+    if (loading || !user) return;
+
+    fetch(`${API_BASE}/api/lesson/all`, { credentials: 'include' })
+      .then(res => {
+        if (!res.ok) throw new Error('Could not load lessons');
+        return res.json();
+      })
+      .then(setMyLessons)
+      .catch(() => setMyLessons([]));
+  }, [user, loading]);
+
+  // 2) If student has no assigned teacher, fetch list of available teachers
   useEffect(() => {
     if (loading) return;
     if (user && user.role !== 'TEACHER' && !user.teacher) {
@@ -26,29 +38,8 @@ const MyLessons = () => {
     }
   }, [user, loading]);
 
-  // Fetch student's lessons (student-only)
-  useEffect(() => {
-    if (loading) return;
-    if (user && user.role !== 'TEACHER' && user.teacher) {
-      fetch(`${API_BASE}/api/lesson/student`, { credentials: 'include' })
-        .then(res => (res.ok ? res.json() : Promise.reject()))
-        .then(setLessons)
-        .catch(() => setLessons([]));
-    }
-  }, [user, loading]);
-
-  // Fetch teacher's lessons (teacher-only)
-  useEffect(() => {
-    if (loading) return;
-    if (user && user.role === 'TEACHER') {
-      fetch(`${API_BASE}/api/lesson/teacher`, { credentials: 'include' })
-        .then(res => (res.ok ? res.json() : Promise.reject()))
-        .then(setTeacherLessons)
-        .catch(() => setTeacherLessons([]));
-    }
-  }, [user, loading]);
-
   const handleTeacherSelect = e => setSelectedTeacher(e.target.value);
+
   const handleTeacherAssign = () => {
     if (!selectedTeacher) return;
     fetch(`${API_BASE}/api/user/assign-teacher/${selectedTeacher}`, {
@@ -73,6 +64,7 @@ const MyLessons = () => {
       </div>
       <div className="dashboard">
         {user.role === 'TEACHER' ? (
+          /* Teacher’s view */
           <div className="teacher-lessons">
             <h2>Your Scheduled Lessons</h2>
             <table className="table">
@@ -89,43 +81,44 @@ const MyLessons = () => {
                 </tr>
               </thead>
               <tbody>
-                {teacherLessons.length > 0
-                  ? teacherLessons.map((lesson, idx) => (
-                      <tr key={lesson.id ?? idx}>
-                        <td>{lesson.instrument}</td>
-                        <td>{lesson.student.name}</td>
-                        <td>{lesson.lessonDate}</td>
-                        <td>{lesson.startTime}</td>
-                        <td>{lesson.endTime}</td>
-                        <td>{lesson.homework || '—'}</td>
-                        <td>
-                          {lesson.pdfFileNames && lesson.pdfFileNames.length > 0
-                            ? lesson.pdfFileNames.map((file, i) => (
-                                <div key={i}>
-                                  <a
-                                    href={`${API_BASE}/api/lesson/file/${file}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    {file}
-                                  </a>
-                                </div>
-                              ))
-                            : 'No files'}
-                        </td>
-                      </tr>
-                    ))
-                  : (
-                      <tr>
-                        <td colSpan="7" style={{ textAlign: 'center' }}>
-                          No lessons scheduled yet.
-                        </td>
-                      </tr>
-                    )}
+                {myLessons.length > 0 ? (
+                  myLessons.map((lesson, idx) => (
+                    <tr key={lesson.id || idx}>
+                      <td>{lesson.instrument}</td>
+                      <td>{lesson.student.name}</td>
+                      <td>{lesson.lessonDate}</td>
+                      <td>{lesson.startTime}</td>
+                      <td>{lesson.endTime}</td>
+                      <td>{lesson.homework || '—'}</td>
+                      <td>
+                        {lesson.pdfFileNames?.length > 0
+                          ? lesson.pdfFileNames.map((file, i) => (
+                              <div key={i}>
+                                <a
+                                  href={`${API_BASE}/api/lesson/file/${file}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  {file}
+                                </a>
+                              </div>
+                            ))
+                          : 'No files'}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center' }}>
+                      No lessons scheduled yet.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         ) : user.teacher ? (
+          /* Student with assigned teacher */
           <div className="assigned-teacher">
             <p>
               Your assigned teacher:{' '}
@@ -144,49 +137,46 @@ const MyLessons = () => {
                 </tr>
               </thead>
               <tbody>
-                {lessons.length > 0
-                  ? lessons.map((lesson, idx) => (
-                      <tr key={lesson.id ?? idx}>
-                        <td>{lesson.instrument}</td>
-                        <td>{lesson.lessonDate}</td>
-                        <td>{lesson.startTime}</td>
-                        <td>{lesson.endTime}</td>
-                        <td>{lesson.homework || '—'}</td>
-                        <td>
-                          {lesson.pdfFileNames && lesson.pdfFileNames.length > 0
-                            ? lesson.pdfFileNames.map((file, i) => (
-                                <div key={i}>
-                                  <a
-                                    href={`${API_BASE}/api/lesson/file/${file}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    {file}
-                                  </a>
-                                </div>
-                              ))
-                            : 'No files'}
-                        </td>
-                      </tr>
-                    ))
-                  : (
-                      <tr>
-                        <td colSpan="6" style={{ textAlign: 'center' }}>
-                          No lessons scheduled yet.
-                        </td>
-                      </tr>
-                    )}
+                {myLessons.length > 0 ? (
+                  myLessons.map((lesson, idx) => (
+                    <tr key={lesson.id || idx}>
+                      <td>{lesson.instrument}</td>
+                      <td>{lesson.lessonDate}</td>
+                      <td>{lesson.startTime}</td>
+                      <td>{lesson.endTime}</td>
+                      <td>{lesson.homework || '—'}</td>
+                      <td>
+                        {lesson.pdfFileNames?.length > 0
+                          ? lesson.pdfFileNames.map((file, i) => (
+                              <div key={i}>
+                                <a
+                                  href={`${API_BASE}/api/lesson/file/${file}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  {file}
+                                </a>
+                              </div>
+                            ))
+                          : 'No files'}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center' }}>
+                      No lessons scheduled yet.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         ) : (
+          /* Student without assigned teacher */
           <div className="assign-teacher">
             <h2>Select a Teacher</h2>
-            {/* existing teacher-assignment UI */}
-            <select
-              value={selectedTeacher}
-              onChange={handleTeacherSelect}
-            >
+            <select value={selectedTeacher} onChange={handleTeacherSelect}>
               <option value="">-- Select --</option>
               {teachers.map(t => (
                 <option key={t.id} value={t.id}>
@@ -200,6 +190,4 @@ const MyLessons = () => {
       </div>
     </div>
   );
-};
-
-export default MyLessons;
+}
