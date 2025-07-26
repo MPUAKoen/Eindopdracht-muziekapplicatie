@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // <-- IMPORT useNavigate
-import { useUser } from '../Context/UserContext'; // <-- IMPORT useUser to save user after registration
+import { useNavigate } from 'react-router-dom';
+import { useUser } from '../Context/UserContext';
 import axios from 'axios';
 import '../App.css';
 
@@ -11,8 +11,8 @@ const RegisterPage = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [instrument, setInstrument] = useState('');
 
-    const navigate = useNavigate(); // <-- INITIALIZE navigate
-    const { login } = useUser();     // <-- Get login() from context
+    const navigate = useNavigate();
+    const { login } = useUser();
 
     const handleNameChange = (e) => setName(e.target.value);
     const handleEmailChange = (e) => setEmail(e.target.value);
@@ -43,8 +43,8 @@ const RegisterPage = () => {
             });
 
             if (response.status === 200) {
-                login(response.data);    // Save the user into context
-                navigate('/');        // Redirect to home page
+                login(response.data);
+                navigate('/');
             }
 
             setName('');
@@ -138,6 +138,10 @@ const RegisterPage = () => {
                         <button type="submit" className="submit-btn">Register</button>
                     </div>
                 </form>
+
+                <div style={{ marginTop: '20px', textAlign: 'center', color: '#ffd700', fontWeight: 'bold' }}>
+                    Want to become a teacher? Please contact the administrator.
+                </div>
             </div>
         </div>
     );

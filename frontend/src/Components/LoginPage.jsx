@@ -39,12 +39,12 @@ const LoginPage = () => {
                 setPassword('');
                 navigate('/');
             } else {
-                setError('Login failed: invalid response');
+                setError('Wrong email or password');
             }
         } catch (error) {
             console.error('Login error:', error);
             setError(
-                error.response?.data?.message || error.message || 'Login failed. Please try again.'
+                error.response?.data?.message || error.message || 'Wrong email or password'
             );
         } finally {
             setIsLoading(false);
