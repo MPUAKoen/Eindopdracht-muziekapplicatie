@@ -67,7 +67,7 @@ const Sidebar = () => {
             <Link to="/login" onClick={handleLogout}>
               <img
                 className="homeIcon"
-                src="src/assets/Logout.svg"
+                src="src\assets\logout-512 (1).png"
                 alt="Logout Icon"
               />
             </Link>
