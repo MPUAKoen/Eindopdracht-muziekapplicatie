@@ -1,4 +1,3 @@
-// src/Components/MyLessons.jsx
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../Context/UserContext';
 import '../App.css';
@@ -11,26 +10,33 @@ export default function MyLessons() {
   const [selectedTeacher, setSelectedTeacher] = useState('');
   const [myLessons, setMyLessons] = useState([]);
 
-  // 1) Fetch all lessons for current user (server filters by student OR teacher)
+  // Fetch lessons for this user (teacher OR student)
   useEffect(() => {
     if (loading || !user) return;
 
-    fetch(`${API_BASE}/api/lesson/all`, { credentials: 'include' })
+    const role = user.role?.toUpperCase();
+    const path = role === 'TEACHER'
+      ? '/api/lesson/teacher'
+      : '/api/lesson/student';
+
+    fetch(`${API_BASE}${path}`, { credentials: 'include' })
       .then(res => {
-        if (!res.ok) throw new Error('Could not load lessons');
+        if (!res.ok) throw new Error(`Failed: ${res.status}`);
         return res.json();
       })
       .then(setMyLessons)
-      .catch(() => setMyLessons([]));
+      .catch(err => {
+        console.error("Error loading lessons:", err);
+        setMyLessons([]);
+      });
   }, [user, loading]);
 
-  // 2) If student has no assigned teacher, fetch list of available teachers
+  // If student with no teacher, load available teachers
   useEffect(() => {
     if (loading) return;
-    if (user && user.role !== 'TEACHER' && !user.teacher) {
+    if (user && user.role?.toUpperCase() !== 'TEACHER' && !user.teacher) {
       fetch(`${API_BASE}/api/user/teachers`, {
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
       })
         .then(res => (res.status === 204 ? [] : res.json()))
         .then(setTeachers)
@@ -39,7 +45,6 @@ export default function MyLessons() {
   }, [user, loading]);
 
   const handleTeacherSelect = e => setSelectedTeacher(e.target.value);
-
   const handleTeacherAssign = () => {
     if (!selectedTeacher) return;
     fetch(`${API_BASE}/api/user/assign-teacher/${selectedTeacher}`, {
@@ -63,8 +68,7 @@ export default function MyLessons() {
         <h1>My Lessons</h1>
       </div>
       <div className="dashboard">
-        {user.role === 'TEACHER' ? (
-          /* Teacher’s view */
+        {user.role?.toUpperCase() === 'TEACHER' ? (
           <div className="teacher-lessons">
             <h2>Your Scheduled Lessons</h2>
             <table className="table">
@@ -85,7 +89,7 @@ export default function MyLessons() {
                   myLessons.map((lesson, idx) => (
                     <tr key={lesson.id || idx}>
                       <td>{lesson.instrument}</td>
-                      <td>{lesson.student.name}</td>
+                      <td>{lesson.student?.name ?? lesson.studentName}</td>
                       <td>{lesson.lessonDate}</td>
                       <td>{lesson.startTime}</td>
                       <td>{lesson.endTime}</td>
@@ -118,7 +122,6 @@ export default function MyLessons() {
             </table>
           </div>
         ) : user.teacher ? (
-          /* Student with assigned teacher */
           <div className="assigned-teacher">
             <p>
               Your assigned teacher:{' '}
@@ -130,8 +133,8 @@ export default function MyLessons() {
                 <tr>
                   <th>Instrument</th>
                   <th>Date</th>
-                  <th>Start Time</th>
-                  <th>End Time</th>
+                  <th>Start</th>
+                  <th>End</th>
                   <th>Homework</th>
                   <th>PDFs</th>
                 </tr>
@@ -173,7 +176,6 @@ export default function MyLessons() {
             </table>
           </div>
         ) : (
-          /* Student without assigned teacher */
           <div className="assign-teacher">
             <h2>Select a Teacher</h2>
             <select value={selectedTeacher} onChange={handleTeacherSelect}>
