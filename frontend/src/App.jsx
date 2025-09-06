@@ -7,8 +7,8 @@ import LessonsPage from "./Components/Schedule.jsx";
 import Mylessons from "./Components/Mylessons.jsx";
 import LoginPage from "./Components/LoginPage.jsx";
 import RegisterPage from "./Components/RegisterPage.jsx";
-import StudentOverview from "./Components/StudentOverview.jsx";
-import { UserProvider } from './Context/UserContext'; // Import UserProvider
+import Admindashboard from "./Components/Admindashboard.jsx";import { UserProvider } from './Context/UserContext';
+import MyStudents from './Components/MyStudents.jsx';
 
 const Navbar = () => (
     <div className="navbar">
@@ -31,7 +31,9 @@ const App = () => {
                             <Route path="/Mylessons" element={<Mylessons />} />
                             <Route path="/login" element={<LoginPage />} />
                             <Route path="/register" element={<RegisterPage />} />
-                            <Route path="/Studentoverview" element={<StudentOverview />} />                        </Routes>
+                            <Route path="/Admindashboard" element={<Admindashboard />} />  
+                            <Route path="/mystudents" element={<MyStudents />} />                      
+                        </Routes>
                     </div>
                 </div>
             </Router>
