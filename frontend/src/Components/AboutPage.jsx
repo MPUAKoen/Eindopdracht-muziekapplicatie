@@ -104,9 +104,7 @@ const AboutPage = () => {
     inputTitle, setInputTitle, inputComposer, setInputComposer, inputNotes, setInputNotes
   ) => (
     <div className="table-wrapper">
-      <table className="table
-      
-      ">
+      <table className="table">
         <caption>{tableTitle}</caption>
         <thead>
           <tr>
@@ -129,50 +127,57 @@ const AboutPage = () => {
               </td>
             </tr>
           ))}
+
+          {/* Input row inside the table */}
+          <tr className="input-row">
+            <td>
+              <input
+                type="text"
+                placeholder="Title"
+                value={inputTitle}
+                onChange={(e) => setInputTitle(e.target.value)}
+              />
+            </td>
+            <td>
+              <input
+                type="text"
+                placeholder="Composer"
+                value={inputComposer}
+                onChange={(e) => setInputComposer(e.target.value)}
+              />
+            </td>
+            <td>
+              <input
+                type="text"
+                placeholder="Notes"
+                value={inputNotes}
+                onChange={(e) => setInputNotes(e.target.value)}
+              />
+            </td>
+            <td>
+              <button
+                onClick={() =>
+                  addPiece(
+                    category,
+                    setList,
+                    list,
+                    inputTitle,
+                    inputComposer,
+                    inputNotes,
+                    () => {
+                      setInputTitle('');
+                      setInputComposer('');
+                      setInputNotes('');
+                    }
+                  )
+                }
+              >
+                Add
+              </button>
+            </td>
+          </tr>
         </tbody>
       </table>
-
-      {/* Form for adding a new piece */}
-      <div className="add-piece-form">
-        <input
-          type="text"
-          placeholder="Title"
-          value={inputTitle}
-          onChange={(e) => setInputTitle(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="Composer"
-          value={inputComposer}
-          onChange={(e) => setInputComposer(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="Notes"
-          value={inputNotes}
-          onChange={(e) => setInputNotes(e.target.value)}
-        />
-        <button
-          className="add-piece-btn"
-          onClick={() =>
-            addPiece(
-              category,
-              setList,
-              list,
-              inputTitle,
-              inputComposer,
-              inputNotes,
-              () => {
-                setInputTitle('');
-                setInputComposer('');
-                setInputNotes('');
-              }
-            )
-          }
-        >
-          Add Piece
-        </button>
-      </div>
 
       <div className="pagination">
         <button onClick={() => setCurrentPage(Math.max(currentPage - 1, 1))} disabled={currentPage === 1}>
@@ -197,7 +202,7 @@ const AboutPage = () => {
       <img src="src/assets/pfp.png" alt="Profile" className="profile-photo" />
 
       <div className="table-container">
-        <div className="tables-row">
+        <div className="tables-flex">
           {renderTable(
             'Favorite Pieces',
             favoritePieces,
@@ -227,7 +232,7 @@ const AboutPage = () => {
             setWishlistNotes
           )}
         </div>
-        <div className="tables-row">
+        <div className="tables-flex">
           {renderTable(
             'Learning Pieces',
             learningPieces,

@@ -127,4 +127,29 @@ public class LessonController {
             )
             .toList();
     }
+
+    /** Delete a lesson by ID (teachers can delete their own; admins can delete any) */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('TEACHER','ADMIN')")
+    public ResponseEntity<Void> deleteLesson(@PathVariable Long id, Authentication auth) {
+        User me = userRepo.findByEmail(auth.getName())
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "User not found"));
+
+        Lesson lesson = lessonRepo.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "Lesson not found"));
+
+        boolean isAdmin = auth.getAuthorities().stream()
+            .anyMatch(a -> "ADMIN".equals(a.getAuthority()));
+
+        if (!isAdmin && !lesson.getTeacher().getId().equals(me.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "You can only delete lessons you teach.");
+        }
+
+
+        lessonRepo.delete(lesson);
+        return ResponseEntity.noContent().build();
+    }
 }

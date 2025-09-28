@@ -9,15 +9,13 @@ export default function MyLessons() {
   const [teachers, setTeachers] = useState([]);
   const [selectedTeacher, setSelectedTeacher] = useState('');
   const [myLessons, setMyLessons] = useState([]);
+  const role = user?.role?.toUpperCase();
 
   // Fetch lessons for this user (teacher OR student)
   useEffect(() => {
     if (loading || !user) return;
 
-    const role = user.role?.toUpperCase();
-    const path = role === 'TEACHER'
-      ? '/api/lesson/teacher'
-      : '/api/lesson/student';
+    const path = role === 'TEACHER' ? '/api/lesson/teacher' : '/api/lesson/student';
 
     fetch(`${API_BASE}${path}`, { credentials: 'include' })
       .then(res => {
@@ -29,20 +27,18 @@ export default function MyLessons() {
         console.error("Error loading lessons:", err);
         setMyLessons([]);
       });
-  }, [user, loading]);
+  }, [user, loading, role]);
 
   // If student with no teacher, load available teachers
   useEffect(() => {
     if (loading) return;
-    if (user && user.role?.toUpperCase() !== 'TEACHER' && !user.teacher) {
-      fetch(`${API_BASE}/api/user/teachers`, {
-        credentials: 'include'
-      })
+    if (user && role !== 'TEACHER' && !user.teacher) {
+      fetch(`${API_BASE}/api/user/teachers`, { credentials: 'include' })
         .then(res => (res.status === 204 ? [] : res.json()))
         .then(setTeachers)
         .catch(() => setTeachers([]));
     }
-  }, [user, loading]);
+  }, [user, loading, role]);
 
   const handleTeacherSelect = e => setSelectedTeacher(e.target.value);
   const handleTeacherAssign = () => {
@@ -60,6 +56,28 @@ export default function MyLessons() {
       .catch(console.error);
   };
 
+  // ⬇️ NEW: delete a lesson (teacher-only)
+  const handleDeleteLesson = async (lessonId) => {
+    if (!lessonId) return;
+    if (!window.confirm('Delete this lesson?')) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/lesson/${lessonId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || `Failed with status ${res.status}`);
+      }
+      // remove from table immediately
+      setMyLessons(prev => prev.filter(l => (l.id ?? l.lessonId) !== lessonId));
+    } catch (e) {
+      console.error('Delete failed:', e);
+      alert('Could not delete lesson.');
+    }
+  };
+
   if (loading) return <div>Loading…</div>;
 
   return (
@@ -68,7 +86,7 @@ export default function MyLessons() {
         <h1>My Lessons</h1>
       </div>
       <div className="dashboard">
-        {user.role?.toUpperCase() === 'TEACHER' ? (
+        {role === 'TEACHER' ? (
           <div className="teacher-lessons">
             <h2>Your Scheduled Lessons</h2>
             <table className="table">
@@ -82,6 +100,7 @@ export default function MyLessons() {
                   <th>End</th>
                   <th>Homework</th>
                   <th>PDFs</th>
+                  <th>Actions</th> {/* ⬅️ NEW */}
                 </tr>
               </thead>
               <tbody>
@@ -109,11 +128,23 @@ export default function MyLessons() {
                             ))
                           : 'No files'}
                       </td>
+                      <td>
+                        {lesson.id ? (
+                          <button
+                            onClick={() => handleDeleteLesson(lesson.id)}
+                            style={{ background: 'crimson', color: 'white' }}
+                          >
+                            Delete
+                          </button>
+                        ) : (
+                          <span style={{ opacity: 0.6 }}>—</span>
+                        )}
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" style={{ textAlign: 'center' }}>
+                    <td colSpan="8" style={{ textAlign: 'center' }}>
                       No lessons scheduled yet.
                     </td>
                   </tr>

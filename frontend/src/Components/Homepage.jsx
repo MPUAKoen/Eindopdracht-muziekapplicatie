@@ -1,129 +1,235 @@
-    import React, { useState, useEffect } from 'react';
-    import { useUser } from '../Context/UserContext'; // Import the useUser hook
-    import '../App.css';
+// src/Components/Homepage.jsx
+import React, { useState, useEffect } from 'react';
+import { useUser } from '../Context/UserContext';
+import '../App.css';
 
-    const Homepage = () => {
-        const [workingOnPieces, setWorkingOnPieces] = useState([]);
-        const [newTitle, setNewTitle] = useState("");
-        const [newFocus, setNewFocus] = useState("");
-        const { user, loading } = useUser(); // ✅ include loading
+const API_BASE = 'http://localhost:8080';
 
-        // Fetch the data (working on pieces) from the backend on page load
-        useEffect(() => {
-            fetch("/api/pieces") // Assuming this endpoint returns all pieces
-                .then((res) => res.json())
-                .then((data) => setWorkingOnPieces(data))
-                .catch((error) => console.error("Error fetching pieces:", error));
-        }, []);
+const sortByDateAdded = (data) => {
+  return data.sort((a, b) => {
+    if (a.dateAdded && b.dateAdded) {
+      return new Date(b.dateAdded) - new Date(a.dateAdded);
+    }
+    return 0;
+  });
+};
 
-        // Handle adding a new piece and sending it to the backend
-        const handleAddPiece = () => {
-            if (!newTitle || !newFocus) return;
+const itemsPerPage = 5;
+const paginate = (data, currentPage, itemsPerPage) =>
+  data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+const totalPages = (data) => Math.ceil(data.length / itemsPerPage);
 
-            const newPiece = { title: newTitle, focus: newFocus };
+const Homepage = () => {
+  const { user, loading } = useUser();
 
-            // Send the new piece data to the backend
-            fetch("/api/pieces", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(newPiece),
-            })
-                .then((res) => res.json())
-                .then(() => {
-                    // After adding, fetch the latest data again
-                    fetch("/api/pieces")
-                        .then((res) => res.json())
-                        .then((data) => setWorkingOnPieces(data));
+  const [upcomingLessons, setUpcomingLessons] = useState([]);
 
-                    // Clear input fields
-                    setNewTitle("");
-                    setNewFocus("");
-                })
-                .catch((error) => {
-                    console.error("Error adding piece:", error);
-                });
-        };
+  // Working on pieces state
+  const [workingPieces, setWorkingPieces] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [title, setTitle] = useState('');
+  const [composer, setComposer] = useState('');
+  const [notes, setNotes] = useState('');
 
-        if (loading) return <div>Loading user...</div>; // ✅ wait until user context is loaded
+  // Load working on pieces from user
+  useEffect(() => {
+    if (user) {
+      setWorkingPieces(user.workingOnPieces || []);
+    }
+  }, [user]);
 
-        return (
-            <div className="mainpage">
-                <div className="header">
-                    <h1>Home</h1>
-                </div>
+  // Load upcoming lessons from backend
+  useEffect(() => {
+    if (loading || !user) return;
 
-                <div className="homepage-content">
-                    <div className="widgets-container">
-                        {/* Welcome Message */}
-                        <table className="widget-table">
-                            <caption>Welcome Back, {user ? user.name : "Guest"}!</caption> 
-                            <tbody>
-                                <tr>
-                                    <td>Here’s a quick overview of your account.</td>
-                                </tr>
-                            </tbody>
-                        </table>
+    const role = user.role?.toUpperCase();
+    const path = role === 'TEACHER' ? '/api/lesson/teacher' : '/api/lesson/student';
 
-                        {/* Upcoming Lessons */}
-                        <table className="widget-table">
-                            <caption>Upcoming Lessons</caption>
-                            <thead>
-                                <tr>
-                                    <th>Lesson</th>
-                                    <th>Time</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Lesson 1</td>
-                                    <td>10:00 AM - 11:00 AM</td>
-                                </tr>
-                                <tr>
-                                    <td>Lesson 2</td>
-                                    <td>2:00 PM - 3:00 PM</td>
-                                </tr>
-                            </tbody>
-                        </table>
+    fetch(`${API_BASE}${path}`, { credentials: 'include' })
+      .then(res => (res.ok ? res.json() : []))
+      .then(data => {
+        const toMs = (d, t) => Date.parse(`${d}T${t || '00:00:00'}`);
+        const sorted = (Array.isArray(data) ? data : [])
+          .slice()
+          .sort((a, b) => toMs(a.lessonDate, a.startTime) - toMs(b.lessonDate, b.startTime));
+        setUpcomingLessons(sorted.slice(0, 5));
+      })
+      .catch(() => setUpcomingLessons([]));
+  }, [user, loading]);
 
-                        {/* Working on Pieces */}
-                        <table className="widget-table">
-                            <caption>Working on Pieces</caption>
-                            <thead>
-                                <tr>
-                                    <th>Piece</th>
-                                    <th>Focus</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {workingOnPieces.map((piece, index) => (
-                                    <tr key={index}>
-                                        <td>{piece.title}</td>
-                                        <td>{piece.focus}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+  const addPiece = () => {
+    if (!title || !composer) return;
 
-                        {/* Add New Piece Form */}
-                        <div className="add-piece-form">
-                            <input
-                                type="text"
-                                placeholder="Piece Title"
-                                value={newTitle}
-                                onChange={(e) => setNewTitle(e.target.value)}
-                            />
-                            <input
-                                type="text"
-                                placeholder="Focus"
-                                value={newFocus}
-                                onChange={(e) => setNewFocus(e.target.value)}
-                            />
-                            <button className="add-piece-btn" onClick={handleAddPiece}>Add Piece</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    const newPiece = { title, composer, notes };
+
+    fetch(`${API_BASE}/api/piece/add`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ ...newPiece, category: 'workingonpieces' })
+    })
+      .then(res => res.text())
+      .then(() => {
+        setWorkingPieces([...workingPieces, newPiece]);
+        setTitle('');
+        setComposer('');
+        setNotes('');
+        fetchUser(); 
+      })
+      .catch(err => console.error('Error adding piece:', err));
+  };
+
+  const deletePiece = (piece) => {
+    fetch(`${API_BASE}/api/piece/delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        title: piece.title,
+        composer: piece.composer,
+        notes: piece.notes,
+        category: 'workingonpieces'
+      })
+    })
+      .then(res => res.text())
+      .then(() => {
+        const updated = workingPieces.filter(
+          p =>
+            p.title !== piece.title ||
+            p.composer !== piece.composer ||
+            p.notes !== piece.notes
         );
-    };
+        setWorkingPieces(updated);
+      })
+      .catch(err => console.error('Error deleting piece:', err));
+  };
 
-    export default Homepage;
+  if (loading) return <div>Loading user...</div>;
+
+  const asLessonLabel = (lesson) => {
+    const counterpart =
+      user?.role?.toUpperCase() === 'TEACHER'
+        ? lesson.student?.name ?? lesson.studentName
+        : lesson.teacher?.name ?? lesson.teacherName;
+    return `${lesson.instrument || 'Lesson'}${counterpart ? ` — ${counterpart}` : ''}`;
+  };
+  const asTimeLabel = (lesson) =>
+    `${lesson.lessonDate} ${lesson.startTime ?? ''}${lesson.endTime ? `–${lesson.endTime}` : ''}`;
+
+  return (
+    <div className="mainpage">
+      <div className="header">
+        <h1>Home</h1>
+      </div>
+
+      <div className="homepage-content">
+        <div className="widgets-container">
+          {/* Welcome */}
+          <table className="widget-table">
+            <caption>Welcome Back, {user ? user.name : 'Guest'}!</caption>
+            <tbody>
+              <tr>
+                <td>Here’s a quick overview of your account.</td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Upcoming lessons */}
+          <table className="widget-table">
+            <caption>Upcoming Lessons</caption>
+            <thead>
+              <tr>
+                <th>Lesson</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {upcomingLessons.length > 0 ? (
+                upcomingLessons.map((lesson, i) => (
+                  <tr key={lesson.id ?? `${i}`}>
+                    <td>{asLessonLabel(lesson)}</td>
+                    <td>{asTimeLabel(lesson)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="2" style={{ textAlign: 'center' }}>
+                    No upcoming lessons
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+
+          {/* Working on pieces */}
+          <div className="table-wrapper">
+            <table className="table">
+              <caption>Working on Pieces</caption>
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Composer</th>
+                  <th>Notes</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginate(sortByDateAdded(workingPieces), currentPage, itemsPerPage).map((piece, index) => (
+                  <tr key={index}>
+                    <td>{piece.title}</td>
+                    <td>{piece.composer}</td>
+                    <td>{piece.notes}</td>
+                    <td>
+                      <button onClick={() => deletePiece(piece)}>Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Add new piece form */}
+            <div className="add-piece-form">
+              <input
+                type="text"
+                placeholder="Title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+              <input
+                type="text"
+                placeholder="Composer"
+                value={composer}
+                onChange={(e) => setComposer(e.target.value)}
+              />
+              <input
+                type="text"
+                placeholder="Notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+              <button className="add-piece-btn" onClick={addPiece}>
+                Add Piece
+              </button>
+            </div>
+
+            {/* Pagination */}
+            <div className="pagination">
+              <button onClick={() => setCurrentPage(Math.max(currentPage - 1, 1))} disabled={currentPage === 1}>
+                Previous
+              </button>
+              <span>Page {currentPage} of {totalPages(workingPieces)}</span>
+              <button
+                onClick={() => setCurrentPage(Math.min(currentPage + 1, totalPages(workingPieces)))}
+                disabled={currentPage === totalPages(workingPieces)}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Homepage;
