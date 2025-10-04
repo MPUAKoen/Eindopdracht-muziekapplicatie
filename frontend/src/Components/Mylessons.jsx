@@ -1,5 +1,7 @@
+// src/Components/MyLessons.jsx
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../Context/UserContext';
+import { Link } from 'react-router-dom';
 import '../App.css';
 
 const API_BASE = 'http://localhost:8080';
@@ -11,10 +13,8 @@ export default function MyLessons() {
   const [myLessons, setMyLessons] = useState([]);
   const role = user?.role?.toUpperCase();
 
-  // Fetch lessons for this user (teacher OR student)
   useEffect(() => {
     if (loading || !user) return;
-
     const path = role === 'TEACHER' ? '/api/lesson/teacher' : '/api/lesson/student';
 
     fetch(`${API_BASE}${path}`, { credentials: 'include' })
@@ -29,7 +29,6 @@ export default function MyLessons() {
       });
   }, [user, loading, role]);
 
-  // If student with no teacher, load available teachers
   useEffect(() => {
     if (loading) return;
     if (user && role !== 'TEACHER' && !user.teacher) {
@@ -56,7 +55,6 @@ export default function MyLessons() {
       .catch(console.error);
   };
 
-  // ⬇️ NEW: delete a lesson (teacher-only)
   const handleDeleteLesson = async (lessonId) => {
     if (!lessonId) return;
     if (!window.confirm('Delete this lesson?')) return;
@@ -70,7 +68,6 @@ export default function MyLessons() {
         const txt = await res.text();
         throw new Error(txt || `Failed with status ${res.status}`);
       }
-      // remove from table immediately
       setMyLessons(prev => prev.filter(l => (l.id ?? l.lessonId) !== lessonId));
     } catch (e) {
       console.error('Delete failed:', e);
@@ -100,7 +97,7 @@ export default function MyLessons() {
                   <th>End</th>
                   <th>Homework</th>
                   <th>PDFs</th>
-                  <th>Actions</th> {/* ⬅️ NEW */}
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -112,7 +109,15 @@ export default function MyLessons() {
                       <td>{lesson.lessonDate}</td>
                       <td>{lesson.startTime}</td>
                       <td>{lesson.endTime}</td>
-                      <td>{lesson.homework || '—'}</td>
+                      <td>
+                        {lesson.id ? (
+                          <Link to={`/homework/${lesson.id}`}>
+                            <button className="submit-btn">View Homework</button>
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td>
                         {lesson.pdfFileNames?.length > 0
                           ? lesson.pdfFileNames.map((file, i) => (
@@ -178,7 +183,15 @@ export default function MyLessons() {
                       <td>{lesson.lessonDate}</td>
                       <td>{lesson.startTime}</td>
                       <td>{lesson.endTime}</td>
-                      <td>{lesson.homework || '—'}</td>
+                      <td>
+                        {lesson.id ? (
+                          <Link to={`/homework/${lesson.id}`}>
+                            <button className="submit-btn">View Homework</button>
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td>
                         {lesson.pdfFileNames?.length > 0
                           ? lesson.pdfFileNames.map((file, i) => (

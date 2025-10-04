@@ -36,21 +36,21 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            // enable CORS and disable CSRF for a JSON API
+            // Enable CORS and disable CSRF for API
             .cors().and()
             .csrf().disable()
 
-            // authorize endpoints
+            // Authorization rules
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                 .requestMatchers(AUTHENTICATED_ENDPOINTS).authenticated()
                 .anyRequest().permitAll()
             )
 
-            // disable default form login, use your AuthController instead
+            // Disable default Spring login page, since you have your own AuthController
             .formLogin().disable()
 
-            // configure logout endpoint to return 200 OK
+            // Configure logout to return 200 OK instead of redirect
             .logout(logout -> logout
                 .logoutUrl("/api/user/logout")
                 .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.OK))
@@ -62,15 +62,16 @@ public class SecurityConfig {
     }
 
     /**
-     * Global CORS configuration to allow your React frontend on port 5173.
+     * 🔑 Global CORS configuration to allow your React app on port 5173.
+     * This is REQUIRED for fetch(..., { credentials: "include" }) to work.
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOrigins(List.of("http://localhost:5173"));           // your Vite dev server
+        cfg.setAllowedOrigins(List.of("http://localhost:5173")); // your Vite dev server
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        cfg.setAllowedHeaders(List.of("*"));                               // allow Content-Type, etc.
-        cfg.setAllowCredentials(true);                                     // if you send cookies/session
+        cfg.setAllowedHeaders(List.of("*"));
+        cfg.setAllowCredentials(true); // allow cookies/session
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", cfg);
@@ -78,7 +79,7 @@ public class SecurityConfig {
     }
 
     /**
-     * PasswordEncoder bean for encoding user passwords (used by DataInitializer, AuthController, etc.)
+     * 🔑 Password encoder for user passwords
      */
     @Bean
     public PasswordEncoder passwordEncoder() {
