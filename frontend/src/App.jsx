@@ -30,7 +30,7 @@ function AppRoutes() {
       <Route
         path="/profile"
         element={
-          <ProtectedRoute allowedRoles={["STUDENT", "TEACHER", "ADMIN"]}>
+          <ProtectedRoute allowedRoles={["USER", "TEACHER", "ADMIN"]}>
             <AboutPage key={`about-${location.key}`} />
           </ProtectedRoute>
         }
@@ -40,7 +40,7 @@ function AppRoutes() {
       <Route
         path="/mylessons"
         element={
-          <ProtectedRoute allowedRoles={["STUDENT", "TEACHER"]}>
+          <ProtectedRoute allowedRoles={["USER", "TEACHER"]}>
             <Mylessons />
           </ProtectedRoute>
         }
@@ -50,7 +50,7 @@ function AppRoutes() {
       <Route
         path="/homework/:lessonId"
         element={
-          <ProtectedRoute allowedRoles={["STUDENT", "TEACHER", "ADMIN"]}>
+          <ProtectedRoute allowedRoles={["USER", "TEACHER", "ADMIN"]}>
             <HomeworkPage />
           </ProtectedRoute>
         }
