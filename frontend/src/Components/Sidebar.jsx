@@ -91,15 +91,19 @@ const Sidebar = () => {
                   />
                 </Link>
               </li>
-              <li>
-                <Link to={getLink('/Mylessons')} onClick={handleLinkClick}>
-                  <img
-                    className="homeIcon"
-                    src="src/assets/calendar.png"
-                    alt="My Lessons"
-                  />
-                </Link>
-              </li>
+
+              {/* Only USERS and TEACHERS */}
+              {(role === 'USER' || role === 'TEACHER') && (
+                <li>
+                  <Link to={getLink('/Mylessons')} onClick={handleLinkClick}>
+                    <img
+                      className="homeIcon"
+                      src="src/assets/calendar.png"
+                      alt="My Lessons"
+                    />
+                  </Link>
+                </li>
+              )}
             </>
           )}
 

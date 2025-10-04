@@ -11,6 +11,7 @@ import RegisterPage from "./Components/RegisterPage.jsx";
 import Admindashboard from "./Components/Admindashboard.jsx";
 import MyStudents from './Components/MyStudents.jsx';
 import { UserProvider } from './Context/UserContext';
+import ProtectedRoute from "./Components/ProtectedRoute"; // ✅ import
 
 const Navbar = () => <div className="navbar" />;
 
@@ -19,17 +20,58 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Remount on route change ONLY for these two */}
+      {/* Public */}
       <Route path="/" element={<Homepage key={`home-${location.key}`} />} />
-      <Route path="/profile" element={<AboutPage key={`about-${location.key}`} />} />
-
-      {/* Others unchanged (no forced remount) */}
-      <Route path="/schedule" element={<LessonsPage />} />
-      <Route path="/mylessons" element={<Mylessons />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/admindashboard" element={<Admindashboard />} />
-      <Route path="/mystudents" element={<MyStudents />} />
+
+      {/* Everyone logged in */}
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute allowedRoles={["USER", "TEACHER", "ADMIN"]}>
+            <AboutPage key={`about-${location.key}`} />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Students + Teachers */}
+      <Route
+        path="/mylessons"
+        element={
+          <ProtectedRoute allowedRoles={["USER", "TEACHER"]}>
+            <Mylessons />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Teachers only */}
+      <Route
+        path="/schedule"
+        element={
+          <ProtectedRoute allowedRoles={["TEACHER"]}>
+            <LessonsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/mystudents"
+        element={
+          <ProtectedRoute allowedRoles={["TEACHER"]}>
+            <MyStudents />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Admin only */}
+      <Route
+        path="/admindashboard"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <Admindashboard />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 }

@@ -74,7 +74,6 @@ const Homepage = () => {
         setTitle('');
         setComposer('');
         setNotes('');
-        fetchUser(); 
       })
       .catch(err => console.error('Error adding piece:', err));
   };
@@ -164,7 +163,7 @@ const Homepage = () => {
           {/* Working on pieces */}
           <div className="table-wrapper">
             <table className="table">
-              <caption>Working on Pieces</caption>
+              <caption>Pieces that I am learning</caption>
               <thead>
                 <tr>
                   <th>Title</th>
@@ -184,42 +183,57 @@ const Homepage = () => {
                     </td>
                   </tr>
                 ))}
+
+                {/* Input row inside the table */}
+                <tr className="input-row">
+                  <td>
+                    <input
+                      type="text"
+                      placeholder="Title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      placeholder="Composer"
+                      value={composer}
+                      onChange={(e) => setComposer(e.target.value)}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      placeholder="Notes"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                    />
+                  </td>
+                  <td>
+                    <button className="add-piece-btn" onClick={addPiece}>
+                      Add
+                    </button>
+                  </td>
+                </tr>
               </tbody>
             </table>
 
-            {/* Add new piece form */}
-            <div className="add-piece-form">
-              <input
-                type="text"
-                placeholder="Title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-              <input
-                type="text"
-                placeholder="Composer"
-                value={composer}
-                onChange={(e) => setComposer(e.target.value)}
-              />
-              <input
-                type="text"
-                placeholder="Notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-              <button className="add-piece-btn" onClick={addPiece}>
-                Add Piece
-              </button>
-            </div>
-
             {/* Pagination */}
             <div className="pagination">
-              <button onClick={() => setCurrentPage(Math.max(currentPage - 1, 1))} disabled={currentPage === 1}>
+              <button
+                onClick={() => setCurrentPage(Math.max(currentPage - 1, 1))}
+                disabled={currentPage === 1}
+              >
                 Previous
               </button>
-              <span>Page {currentPage} of {totalPages(workingPieces)}</span>
+              <span>
+                Page {currentPage} of {totalPages(workingPieces)}
+              </span>
               <button
-                onClick={() => setCurrentPage(Math.min(currentPage + 1, totalPages(workingPieces)))}
+                onClick={() =>
+                  setCurrentPage(Math.min(currentPage + 1, totalPages(workingPieces)))
+                }
                 disabled={currentPage === totalPages(workingPieces)}
               >
                 Next
