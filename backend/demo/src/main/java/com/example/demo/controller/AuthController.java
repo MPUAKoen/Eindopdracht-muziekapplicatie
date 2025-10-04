@@ -59,20 +59,53 @@ public class AuthController {
         return ResponseEntity.ok(buildUserResponse(newUser));
     }
 
-    // === Toggle User Role ===
+    // === SAFE Toggle User Role ===
     @PatchMapping("/toggle-role/{userId}")
     public ResponseEntity<?> toggleUserRole(@PathVariable Long userId) {
-        Optional<User> userOptional = userRepository.findById(userId);
-        if (userOptional.isEmpty()) {
-            return ResponseEntity.notFound().build();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        // === CASE 1: Demote a TEACHER to USER ===
+        if ("TEACHER".equalsIgnoreCase(user.getRole())) {
+            logger.info("Demoting teacher {} -> USER", user.getEmail());
+
+            // Detach all students linked to this teacher
+            List<User> allUsers = userRepository.findAll();
+            for (User student : allUsers) {
+                if (student.getTeacher() != null && student.getTeacher().getId().equals(user.getId())) {
+                    student.setTeacher(null);
+                    userRepository.save(student);
+                }
+            }
+
+            // Demote teacher
+            user.setRole("USER");
+            userRepository.save(user);
+
+            return ResponseEntity.ok("Teacher demoted to student.");
         }
 
-        User user = userOptional.get();
-        String newRole = user.getRole().equalsIgnoreCase("TEACHER") ? "USER" : "TEACHER";
-        user.setRole(newRole);
-        userRepository.save(user);
+        // === CASE 2: Promote a USER to TEACHER ===
+        if ("USER".equalsIgnoreCase(user.getRole())) {
+            logger.info("Promoting student {} -> TEACHER", user.getEmail());
 
-        return ResponseEntity.ok("User role updated to " + newRole);
+            // If the student currently has a teacher, unlink them first
+            if (user.getTeacher() != null) {
+                User oldTeacher = user.getTeacher();
+                oldTeacher.getUsers().remove(user); // ✅ correct
+                user.setTeacher(null);
+                userRepository.save(oldTeacher);
+                userRepository.save(user);
+            }
+
+            // Promote to teacher
+            user.setRole("TEACHER");
+            userRepository.save(user);
+
+            return ResponseEntity.ok("Student promoted to teacher.");
+        }
+
+        return ResponseEntity.badRequest().body("Invalid role transition");
     }
 
     // === Assign Teacher to Student ===
@@ -84,11 +117,11 @@ public class AuthController {
 
         String studentEmail = authentication.getName();
         User student = userRepository.findByEmail(studentEmail)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         User teacher = userRepository.findById(teacherId)
-            .filter(u -> "TEACHER".equalsIgnoreCase(u.getRole()))
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid teacher ID"));
+                .filter(u -> "TEACHER".equalsIgnoreCase(u.getRole()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid teacher ID"));
 
         student.setTeacher(teacher);
         userRepository.save(student);
@@ -130,9 +163,9 @@ public class AuthController {
 
         User teacher = teacherOpt.get();
         List<User> students = userRepository.findAll().stream()
-            .filter(u -> u.getRole().equalsIgnoreCase("USER"))
-            .filter(u -> u.getTeacher() != null && u.getTeacher().getId().equals(teacher.getId()))
-            .toList();
+                .filter(u -> u.getRole().equalsIgnoreCase("USER"))
+                .filter(u -> u.getTeacher() != null && u.getTeacher().getId().equals(teacher.getId()))
+                .toList();
 
         return ResponseEntity.ok(students);
     }
@@ -146,10 +179,10 @@ public class AuthController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok()
-            .header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate")
-            .header("Pragma", "no-cache")
-            .header("Expires", "0")
-            .body(teachers);
+                .header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate")
+                .header("Pragma", "no-cache")
+                .header("Expires", "0")
+                .body(teachers);
     }
 
     // === Get Current User ===
@@ -163,7 +196,7 @@ public class AuthController {
 
         String email = authentication.getName();
         User currentUser = userRepository.findByEmail(email)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         return ResponseEntity.ok(buildUserResponse(currentUser));
     }
@@ -188,14 +221,25 @@ public class AuthController {
     }
 
     // === DTOs ===
-
     public static class LoginRequest {
         private String email;
         private String password;
-        public String getEmail() { return email; }
-        public void setEmail(String email) { this.email = email; }
-        public String getPassword() { return password; }
-        public void setPassword(String password) { this.password = password; }
+
+        public String getEmail() {
+            return email;
+        }
+
+        public void setEmail(String email) {
+            this.email = email;
+        }
+
+        public String getPassword() {
+            return password;
+        }
+
+        public void setPassword(String password) {
+            this.password = password;
+        }
     }
 
     public static class RegisterRequest {
@@ -203,14 +247,38 @@ public class AuthController {
         private String email;
         private String password;
         private String instrument;
-        public String getName() { return name; }
-        public void setName(String name) { this.name = name; }
-        public String getEmail() { return email; }
-        public void setEmail(String email) { this.email = email; }
-        public String getPassword() { return password; }
-        public void setPassword(String password) { this.password = password; }
-        public String getInstrument() { return instrument; }
-        public void setInstrument(String instrument) { this.instrument = instrument; }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getEmail() {
+            return email;
+        }
+
+        public void setEmail(String email) {
+            this.email = email;
+        }
+
+        public String getPassword() {
+            return password;
+        }
+
+        public void setPassword(String password) {
+            this.password = password;
+        }
+
+        public String getInstrument() {
+            return instrument;
+        }
+
+        public void setInstrument(String instrument) {
+            this.instrument = instrument;
+        }
     }
 
     public static class TeacherDto {
@@ -232,7 +300,7 @@ public class AuthController {
         public String name;
         public String email;
         public String instrument;
-        public String role;                    // <— added field
+        public String role;
         public List<Piece> workingOnPieces;
         public List<Piece> repertoire;
         public List<Piece> wishlist;
@@ -244,18 +312,17 @@ public class AuthController {
                 String name,
                 String email,
                 String instrument,
-                String role,                    // <— accept in ctor
+                String role,
                 List<Piece> workingOnPieces,
                 List<Piece> repertoire,
                 List<Piece> wishlist,
                 List<Piece> favoritePieces,
-                TeacherDto teacher
-        ) {
+                TeacherDto teacher) {
             this.id = id;
             this.name = name;
             this.email = email;
             this.instrument = instrument;
-            this.role = role;               // <— assign here
+            this.role = role;
             this.workingOnPieces = workingOnPieces;
             this.repertoire = repertoire;
             this.wishlist = wishlist;
@@ -269,20 +336,18 @@ public class AuthController {
         if (user.getTeacher() != null) {
             User t = user.getTeacher();
             teacherDto = new TeacherDto(
-                t.getId(), t.getName(), t.getEmail(), t.getInstrument()
-            );
+                    t.getId(), t.getName(), t.getEmail(), t.getInstrument());
         }
         return new CurrentUserResponse(
-            user.getId(),
-            user.getName(),
-            user.getEmail(),
-            user.getInstrument(),
-            user.getRole(),                   // <— pass the role
-            user.getWorkingOnPieces(),
-            user.getRepertoire(),
-            user.getWishlist(),
-            user.getFavoritePieces(),
-            teacherDto
-        );
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getInstrument(),
+                user.getRole(),
+                user.getWorkingOnPieces(),
+                user.getRepertoire(),
+                user.getWishlist(),
+                user.getFavoritePieces(),
+                teacherDto);
     }
 }
