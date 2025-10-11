@@ -42,9 +42,9 @@ public class LessonController {
         this.storage    = storage;
     }
 
-    /** Teachers book lessons for students */
+    /** 🎵 Teachers can add lessons for students */
     @PostMapping("/add")
-    @PreAuthorize("hasAuthority('TEACHER')")
+    @PreAuthorize("hasRole('TEACHER')")
     public Lesson addLesson(
             @RequestParam String instrument,
             @RequestParam Long studentId,
@@ -57,6 +57,11 @@ public class LessonController {
 
         User teacher = userRepo.findByEmail(authentication.getName())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Teacher not found"));
+
+        // ✅ double check role in DB as safeguard
+        if (!"TEACHER".equalsIgnoreCase(teacher.getRole())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only teachers can add lessons");
+        }
 
         User student = userRepo.findById(studentId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
@@ -78,25 +83,25 @@ public class LessonController {
         return lessonRepo.save(lesson);
     }
 
-    /** Teachers view all lessons */
+    /** 🎓 Teachers can view all their lessons */
     @GetMapping("/teacher")
-    @PreAuthorize("hasAuthority('TEACHER')")
+    @PreAuthorize("hasRole('TEACHER')")
     public List<LessonSimpleView> getByTeacher(Authentication auth) {
         User teacher = userRepo.findByEmail(auth.getName())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Teacher not found"));
         return lessonRepo.findSimpleByTeacherId(teacher.getId());
     }
 
-    /** Students view their own lessons */
+    /** 👩‍🎓 Students view their own lessons */
     @GetMapping("/student")
-    @PreAuthorize("hasAnyAuthority('USER','STUDENT','TEACHER')")
+    @PreAuthorize("hasAnyRole('USER','STUDENT','TEACHER')")
     public List<LessonSimpleView> getByStudent(Authentication auth) {
         User student = userRepo.findByEmail(auth.getName())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
         return lessonRepo.findSimpleByStudentId(student.getId());
     }
 
-    /** Get single lesson by ID (for HomeworkPage) */
+    /** 📄 Get single lesson by ID (for HomeworkPage) */
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<LessonDetailDto> getLesson(@PathVariable Long id, Authentication auth) {
@@ -107,14 +112,13 @@ public class LessonController {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         boolean isAdmin = auth.getAuthorities().stream()
-            .anyMatch(a -> "ADMIN".equals(a.getAuthority()));
+            .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
 
         if (!isAdmin && !lesson.getStudent().getId().equals(me.getId()) &&
             !lesson.getTeacher().getId().equals(me.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed");
         }
 
-        // Convert entity to DTO
         LessonDetailDto dto = new LessonDetailDto(
             lesson.getId(),
             lesson.getInstrument(),
@@ -130,7 +134,7 @@ public class LessonController {
         return ResponseEntity.ok(dto);
     }
 
-    /** Download a lesson’s PDF */
+    /** 📎 Download lesson PDF */
     @GetMapping("/file/{filename:.+}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Resource> serveFile(@PathVariable String filename) {
@@ -144,24 +148,9 @@ public class LessonController {
                              .body(resource);
     }
 
-    /** Fetch all lessons for current user */
-    @GetMapping("/all")
-    @PreAuthorize("isAuthenticated()")
-    public List<Lesson> getAllForCurrent(Authentication auth) {
-        User me = userRepo.findByEmail(auth.getName())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-
-        return lessonRepo.findAll().stream()
-            .filter(l ->
-                l.getStudent().getId().equals(me.getId()) ||
-                l.getTeacher().getId().equals(me.getId())
-            )
-            .toList();
-    }
-
-    /** Delete a lesson */
+    /** 🗂️ Delete a lesson (teacher or admin only) */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('TEACHER','ADMIN')")
+    @PreAuthorize("hasAnyRole('TEACHER','ADMIN')")
     public ResponseEntity<Void> deleteLesson(@PathVariable Long id, Authentication auth) {
         User me = userRepo.findByEmail(auth.getName())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
@@ -170,7 +159,7 @@ public class LessonController {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found"));
 
         boolean isAdmin = auth.getAuthorities().stream()
-            .anyMatch(a -> "ADMIN".equals(a.getAuthority()));
+            .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
 
         if (!isAdmin && !lesson.getTeacher().getId().equals(me.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only delete lessons you teach.");
