@@ -178,24 +178,42 @@ export default function MyLessons() {
     }
   };
 
-  // Navigation helpers
-  const renderDateLabel = () => {
-    if (viewMode === 'day') {
-      return new Date(selectedDate).toLocaleDateString(undefined, {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'short',
-      });
-    } else {
-      const start = new Date(selectedDate);
-      const end = new Date(start);
-      start.setDate(start.getDate() - start.getDay());
-      end.setDate(start.getDate() + 6);
-      const fmt = (d) =>
-        d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-      return `${fmt(start)} – ${fmt(end)}`;
-    }
+// Navigation helpers
+const renderDateLabel = () => {
+  const selected = new Date(selectedDate);
+
+  // Map JS getDay() (0=Sun, 1=Mon...) → short 2-letter labels
+  const weekdayLabels = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+  const formatDutch = (d) => {
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
   };
+
+  if (viewMode === 'day') {
+    const weekdayShort = weekdayLabels[selected.getDay()];
+    return `${weekdayShort} ${formatDutch(selected)}`;
+  } else {
+    // Week view: Monday → Sunday
+    const start = new Date(selected);
+    const end = new Date(selected);
+
+    // Adjust to Monday as start of week
+    const day = selected.getDay(); // Sunday = 0, Monday = 1
+    const diffToMonday = day === 0 ? -6 : 1 - day; // shift to Monday
+    start.setDate(selected.getDate() + diffToMonday);
+
+    // End of week (Sunday)
+    end.setDate(start.getDate() + 6);
+
+    const startLabel = `Mo ${formatDutch(start)}`;
+    const endLabel = `Su ${formatDutch(end)}`;
+
+    return `${startLabel} – ${endLabel}`;
+  }
+};
 
   const handlePrev = () => {
     const d = new Date(selectedDate);
