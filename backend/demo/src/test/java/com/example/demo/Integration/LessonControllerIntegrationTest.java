@@ -70,7 +70,7 @@ class LessonControllerIntegrationTest {
         studentId = student.getId();
     }
 
-    // ✅ Test: teacher can add lesson
+    // Test: teacher can add lesson
     @Test
     void addLesson_AsTeacher_ShouldReturnOk() throws Exception {
         MockMultipartFile pdf = new MockMultipartFile(
@@ -91,7 +91,7 @@ class LessonControllerIntegrationTest {
                 .andExpect(status().isOk());
     }
 
-    // 🚫 Test: student cannot add lesson
+    // Test: student cannot add lesson
     @Test
     void addLesson_AsStudent_ShouldReturnForbidden() throws Exception {
         MockMultipartFile pdf = new MockMultipartFile(

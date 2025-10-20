@@ -1,4 +1,3 @@
-// src/Components/MyLessons.jsx
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../Context/UserContext';
 import { Link } from 'react-router-dom';
@@ -11,8 +10,11 @@ export default function MyLessons() {
   const [teachers, setTeachers] = useState([]);
   const [selectedTeacher, setSelectedTeacher] = useState('');
   const [myLessons, setMyLessons] = useState([]);
+  const [viewMode, setViewMode] = useState('day');
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
   const role = user?.role?.toUpperCase();
 
+  // Fetch lessons
   useEffect(() => {
     if (loading || !user) return;
     const path = role === 'TEACHER' ? '/api/lesson/teacher' : '/api/lesson/student';
@@ -22,13 +24,23 @@ export default function MyLessons() {
         if (!res.ok) throw new Error(`Failed: ${res.status}`);
         return res.json();
       })
-      .then(setMyLessons)
+      .then(data => {
+        const sorted = Array.isArray(data)
+          ? data.sort(
+              (a, b) =>
+                new Date(`${a.lessonDate}T${a.startTime}`) -
+                new Date(`${b.lessonDate}T${b.startTime}`)
+            )
+          : [];
+        setMyLessons(sorted);
+      })
       .catch(err => {
-        console.error("Error loading lessons:", err);
+        console.error('Error loading lessons:', err);
         setMyLessons([]);
       });
   }, [user, loading, role]);
 
+  // Fetch teachers (for students)
   useEffect(() => {
     if (loading) return;
     if (user && role !== 'TEACHER' && !user.teacher) {
@@ -39,7 +51,6 @@ export default function MyLessons() {
     }
   }, [user, loading, role]);
 
-  const handleTeacherSelect = e => setSelectedTeacher(e.target.value);
   const handleTeacherAssign = () => {
     if (!selectedTeacher) return;
     fetch(`${API_BASE}/api/user/assign-teacher/${selectedTeacher}`, {
@@ -55,6 +66,26 @@ export default function MyLessons() {
       .catch(console.error);
   };
 
+  // Filter by date or week
+  const filteredLessons = myLessons.filter(lesson => {
+    const lessonDate = new Date(lesson.lessonDate);
+    const selected = new Date(selectedDate);
+
+    if (viewMode === 'day') {
+      return (
+        lessonDate.getFullYear() === selected.getFullYear() &&
+        lessonDate.getMonth() === selected.getMonth() &&
+        lessonDate.getDate() === selected.getDate()
+      );
+    } else {
+      const startOfWeek = new Date(selected);
+      startOfWeek.setDate(selected.getDate() - selected.getDay());
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      return lessonDate >= startOfWeek && lessonDate <= endOfWeek;
+    }
+  });
+
   const handleDeleteLesson = async (lessonId) => {
     if (!lessonId) return;
     if (!window.confirm('Delete this lesson?')) return;
@@ -64,10 +95,7 @@ export default function MyLessons() {
         method: 'DELETE',
         credentials: 'include',
       });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || `Failed with status ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`Failed with status ${res.status}`);
       setMyLessons(prev => prev.filter(l => (l.id ?? l.lessonId) !== lessonId));
     } catch (e) {
       console.error('Delete failed:', e);
@@ -77,94 +105,132 @@ export default function MyLessons() {
 
   if (loading) return <div>Loading…</div>;
 
+  // Format date or week label
+  const renderDateLabel = () => {
+    if (viewMode === 'day') {
+      return new Date(selectedDate).toLocaleDateString(undefined, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'short',
+      });
+    } else {
+      const start = new Date(selectedDate);
+      const end = new Date(start);
+      start.setDate(start.getDate() - start.getDay());
+      end.setDate(start.getDate() + 6);
+      const fmt = (d) =>
+        d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+      return `${fmt(start)} – ${fmt(end)}`;
+    }
+  };
+
+  const handlePrev = () => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() - (viewMode === 'week' ? 7 : 1));
+    setSelectedDate(d.toISOString().split('T')[0]);
+  };
+
+  const handleNext = () => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + (viewMode === 'week' ? 7 : 1));
+    setSelectedDate(d.toISOString().split('T')[0]);
+  };
+
   return (
     <div className="mainpage">
       <div className="header">
         <h1>My Lessons</h1>
       </div>
+
       <div className="dashboard">
+        {/* Centered title-style date navigation */}
+        <div className="lesson-date-header">
+          <button onClick={handlePrev} className="lesson-arrow">‹</button>
+          <h2 className="lesson-title">{renderDateLabel()}</h2>
+          <button onClick={handleNext} className="lesson-arrow">›</button>
+          <button
+            className="lesson-toggle-right"
+            onClick={() => setViewMode(viewMode === 'day' ? 'week' : 'day')}
+          >
+            <img src="src/assets/calendar.png" alt="Toggle View" />
+            {viewMode === 'day' ? 'Week View' : 'Day View'}
+          </button>
+        </div>
+
         {role === 'TEACHER' ? (
-          <div className="teacher-lessons">
-            <h2>Your Scheduled Lessons</h2>
-            <table className="table">
-              <caption>Lessons You’re Teaching</caption>
-              <thead>
-                <tr>
-                  <th>Instrument</th>
-                  <th>Student</th>
-                  <th>Date</th>
-                  <th>Start</th>
-                  <th>End</th>
-                  <th>Homework</th>
-                  <th>PDFs</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {myLessons.length > 0 ? (
-                  myLessons.map((lesson, idx) => (
-                    <tr key={lesson.id || idx}>
-                      <td>{lesson.instrument}</td>
-                      <td>{lesson.student?.name ?? lesson.studentName}</td>
-                      <td>{lesson.lessonDate}</td>
-                      <td>{lesson.startTime}</td>
-                      <td>{lesson.endTime}</td>
-                      <td>
-                        {lesson.id ? (
-                          <Link to={`/homework/${lesson.id}`}>
-                            <button className="submit-btn">View Homework</button>
-                          </Link>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td>
-                        {lesson.pdfFileNames?.length > 0
-                          ? lesson.pdfFileNames.map((file, i) => (
-                              <div key={i}>
-                                <a
-                                  href={`${API_BASE}/api/lesson/file/${file}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  {file}
-                                </a>
-                              </div>
-                            ))
-                          : 'No files'}
-                      </td>
-                      <td>
-                        {lesson.id ? (
-                          <button
-                            onClick={() => handleDeleteLesson(lesson.id)}
-                            style={{ background: 'crimson', color: 'white' }}
-                          >
-                            Delete
-                          </button>
-                        ) : (
-                          <span style={{ opacity: 0.6 }}>—</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="8" style={{ textAlign: 'center' }}>
-                      No lessons scheduled yet.
+          <table className="table">
+            <caption>Scheduled Lessons</caption>
+            <thead>
+              <tr>
+                <th>Instrument</th>
+                <th>Student</th>
+                <th>Date</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Homework</th>
+                <th>PDFs</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredLessons.length > 0 ? (
+                filteredLessons.map((lesson) => (
+                  <tr key={lesson.id}>
+                    <td>{lesson.instrument}</td>
+                    <td>{lesson.student?.name ?? lesson.studentName}</td>
+                    <td>{lesson.lessonDate}</td>
+                    <td>{lesson.startTime}</td>
+                    <td>{lesson.endTime}</td>
+                    <td>
+                      {lesson.id ? (
+                        <Link to={`/homework/${lesson.id}`}>
+                          <button className="submit-btn">View Homework</button>
+                        </Link>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td>
+                      {lesson.pdfFileNames?.length > 0
+                        ? lesson.pdfFileNames.map((file, i) => (
+                            <div key={i}>
+                              <a
+                                href={`${API_BASE}/api/lesson/file/${file}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {file}
+                              </a>
+                            </div>
+                          ))
+                        : 'No files'}
+                    </td>
+                    <td>
+                      <button
+                        onClick={() => handleDeleteLesson(lesson.id)}
+                        style={{ background: 'crimson', color: 'white' }}
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="8" style={{ textAlign: 'center' }}>
+                    No lessons found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         ) : user.teacher ? (
-          <div className="assigned-teacher">
+          <>
             <p>
-              Your assigned teacher:{' '}
-              <strong>{user.teacher.name}</strong> ({user.teacher.instrument})
+              Your assigned teacher: <strong>{user.teacher.name}</strong> ({user.teacher.instrument})
             </p>
             <table className="table">
-              <caption>My Lessons</caption>
+              <caption>Scheduled Lessons</caption>
               <thead>
                 <tr>
                   <th>Instrument</th>
@@ -176,9 +242,9 @@ export default function MyLessons() {
                 </tr>
               </thead>
               <tbody>
-                {myLessons.length > 0 ? (
-                  myLessons.map((lesson, idx) => (
-                    <tr key={lesson.id || idx}>
+                {filteredLessons.length > 0 ? (
+                  filteredLessons.map((lesson) => (
+                    <tr key={lesson.id}>
                       <td>{lesson.instrument}</td>
                       <td>{lesson.lessonDate}</td>
                       <td>{lesson.startTime}</td>
@@ -189,7 +255,7 @@ export default function MyLessons() {
                             <button className="submit-btn">View Homework</button>
                           </Link>
                         ) : (
-                          "—"
+                          '—'
                         )}
                       </td>
                       <td>
@@ -212,19 +278,22 @@ export default function MyLessons() {
                 ) : (
                   <tr>
                     <td colSpan="6" style={{ textAlign: 'center' }}>
-                      No lessons scheduled yet.
+                      No lessons found.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
-          </div>
+          </>
         ) : (
           <div className="assign-teacher">
             <h2>Select a Teacher</h2>
-            <select value={selectedTeacher} onChange={handleTeacherSelect}>
+            <select
+              value={selectedTeacher}
+              onChange={(e) => setSelectedTeacher(e.target.value)}
+            >
               <option value="">-- Select --</option>
-              {teachers.map(t => (
+              {teachers.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name} ({t.instrument})
                 </option>
