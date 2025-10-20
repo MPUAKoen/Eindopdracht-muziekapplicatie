@@ -5,13 +5,36 @@ import '../App.css';
 
 const API_BASE = 'http://localhost:8080';
 
+// Helpers for dd-MM-yyyy <-> yyyy-MM-dd
+const toIsoFromDutch = (ddmmyyyy) => {
+  if (!ddmmyyyy?.includes('-')) return ddmmyyyy;
+  const [d, m, y] = ddmmyyyy.split('-');
+  return `${y}-${m}-${d}`;
+};
+const toDutchFromIso = (yyyymmdd) => {
+  if (!yyyymmdd?.includes('-')) return yyyymmdd;
+  const [y, m, d] = yyyymmdd.split('-');
+  return `${d}-${m}-${y}`;
+};
+const parseDutchDateTime = (ddmmyyyy, time = '00:00:00') => {
+  const iso = toIsoFromDutch(ddmmyyyy);
+  const t = time?.length === 5 ? `${time}:00` : time;
+  return new Date(`${iso}T${t || '00:00:00'}`);
+};
+const padSeconds = (t) => (t && t.length === 5 ? `${t}:00` : t || '00:00:00');
+
 export default function MyLessons() {
   const { user, loading, login } = useUser();
   const [teachers, setTeachers] = useState([]);
   const [selectedTeacher, setSelectedTeacher] = useState('');
   const [myLessons, setMyLessons] = useState([]);
+  const [assignedStudents, setAssignedStudents] = useState([]);
+  const [editingLessonId, setEditingLessonId] = useState(null);
+  const [editData, setEditData] = useState({});
   const [viewMode, setViewMode] = useState('day');
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() =>
+    new Date().toISOString().split('T')[0]
+  );
   const role = user?.role?.toUpperCase();
 
   // Fetch lessons
@@ -20,27 +43,27 @@ export default function MyLessons() {
     const path = role === 'TEACHER' ? '/api/lesson/teacher' : '/api/lesson/student';
 
     fetch(`${API_BASE}${path}`, { credentials: 'include' })
-      .then(res => {
-        if (!res.ok) throw new Error(`Failed: ${res.status}`);
-        return res.json();
-      })
+      .then(res => (res.ok ? res.json() : []))
       .then(data => {
-        const sorted = Array.isArray(data)
-          ? data.sort(
-              (a, b) =>
-                new Date(`${a.lessonDate}T${a.startTime}`) -
-                new Date(`${b.lessonDate}T${b.startTime}`)
-            )
-          : [];
+        // Server may return ISO dates (from projection) or Dutch if you later switch.
+        // Normalize to Dutch for display here:
+        const normalized = (Array.isArray(data) ? data : []).map(l => ({
+          ...l,
+          lessonDate: l.lessonDate?.includes('-') && l.lessonDate.indexOf('-') === 4
+            ? toDutchFromIso(l.lessonDate) // ISO -> Dutch
+            : l.lessonDate,                // already Dutch
+        }));
+        const sorted = normalized.sort(
+          (a, b) =>
+            parseDutchDateTime(a.lessonDate, a.startTime) -
+            parseDutchDateTime(b.lessonDate, b.startTime)
+        );
         setMyLessons(sorted);
       })
-      .catch(err => {
-        console.error('Error loading lessons:', err);
-        setMyLessons([]);
-      });
+      .catch(() => setMyLessons([]));
   }, [user, loading, role]);
 
-  // Fetch teachers (for students)
+  // Teachers list (for students without one)
   useEffect(() => {
     if (loading) return;
     if (user && role !== 'TEACHER' && !user.teacher) {
@@ -50,6 +73,16 @@ export default function MyLessons() {
         .catch(() => setTeachers([]));
     }
   }, [user, loading, role]);
+
+  // Assigned students for teacher dropdown
+  useEffect(() => {
+    if (role === 'TEACHER') {
+      fetch(`${API_BASE}/api/user/my-students`, { credentials: 'include' })
+        .then(res => (res.ok ? res.json() : []))
+        .then(setAssignedStudents)
+        .catch(() => setAssignedStudents([]));
+    }
+  }, [role]);
 
   const handleTeacherAssign = () => {
     if (!selectedTeacher) return;
@@ -66,9 +99,9 @@ export default function MyLessons() {
       .catch(console.error);
   };
 
-  // Filter by date or week
+  // Filter by day/week (selectedDate is ISO; lessons are Dutch)
   const filteredLessons = myLessons.filter(lesson => {
-    const lessonDate = new Date(lesson.lessonDate);
+    const lessonDate = parseDutchDateTime(lesson.lessonDate);
     const selected = new Date(selectedDate);
 
     if (viewMode === 'day') {
@@ -103,9 +136,49 @@ export default function MyLessons() {
     }
   };
 
-  if (loading) return <div>Loading…</div>;
+  // Inline edit
+  const handleEditClick = (lesson) => {
+    setEditingLessonId(lesson.id);
+    setEditData({ ...lesson }); // keep date in Dutch in state
+  };
 
-  // Format date or week label
+  const handleCancelEdit = () => {
+    setEditingLessonId(null);
+    setEditData({});
+  };
+
+  const handleEditChange = (field, value) => {
+    setEditData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveEdit = async (lessonId) => {
+    const payload = {
+      ...editData,
+      // send Dutch date (controller accepts dd-MM-yyyy and ISO)
+      lessonDate: editData.lessonDate,
+      startTime: padSeconds(editData.startTime),
+      endTime: padSeconds(editData.endTime),
+    };
+
+    const res = await fetch(`${API_BASE}/api/lesson/${lessonId}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      setMyLessons(prev =>
+        prev.map(l => (l.id === lessonId ? { ...l, ...payload } : l))
+      );
+      setEditingLessonId(null);
+    } else {
+      const txt = await res.text();
+      alert(`Failed to update lesson. ${txt || ''}`);
+    }
+  };
+
+  // Navigation helpers
   const renderDateLabel = () => {
     if (viewMode === 'day') {
       return new Date(selectedDate).toLocaleDateString(undefined, {
@@ -136,6 +209,8 @@ export default function MyLessons() {
     setSelectedDate(d.toISOString().split('T')[0]);
   };
 
+  if (loading) return <div>Loading…</div>;
+
   return (
     <div className="mainpage">
       <div className="header">
@@ -143,7 +218,7 @@ export default function MyLessons() {
       </div>
 
       <div className="dashboard">
-        {/* Centered title-style date navigation */}
+        {/* Navigation header */}
         <div className="lesson-date-header">
           <button onClick={handlePrev} className="lesson-arrow">‹</button>
           <h2 className="lesson-title">{renderDateLabel()}</h2>
@@ -176,20 +251,99 @@ export default function MyLessons() {
               {filteredLessons.length > 0 ? (
                 filteredLessons.map((lesson) => (
                   <tr key={lesson.id}>
-                    <td>{lesson.instrument}</td>
-                    <td>{lesson.student?.name ?? lesson.studentName}</td>
-                    <td>{lesson.lessonDate}</td>
-                    <td>{lesson.startTime}</td>
-                    <td>{lesson.endTime}</td>
+                    {/* Instrument */}
                     <td>
-                      {lesson.id ? (
-                        <Link to={`/homework/${lesson.id}`}>
-                          <button className="submit-btn">View Homework</button>
-                        </Link>
+                      {editingLessonId === lesson.id ? (
+                        <select
+                          value={editData.instrument || ''}
+                          onChange={(e) => handleEditChange('instrument', e.target.value)}
+                        >
+                          <option value="">Select</option>
+                          <option value="Piano">Piano</option>
+                          <option value="Violin">Violin</option>
+                          <option value="Guitar">Guitar</option>
+                          <option value="Drums">Drums</option>
+                          <option value="Voice">Voice</option>
+                        </select>
                       ) : (
-                        '—'
+                        lesson.instrument
                       )}
                     </td>
+
+                    {/* Student */}
+                    <td>
+                      {editingLessonId === lesson.id ? (
+                        <select
+                          value={editData.student?.id || lesson.studentId || ''}
+                          onChange={(e) => handleEditChange('studentId', e.target.value)}
+                        >
+                          <option value="">Select student</option>
+                          {assignedStudents.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        lesson.student?.name ?? lesson.studentName
+                      )}
+                    </td>
+
+                    {/* Date */}
+                    <td>
+                      {editingLessonId === lesson.id ? (
+                        // date input needs ISO; convert Dutch->ISO for the input value
+                        <input
+                          type="date"
+                          value={toIsoFromDutch(editData.lessonDate || lesson.lessonDate || '')}
+                          onChange={(e) =>
+                            handleEditChange('lessonDate', toDutchFromIso(e.target.value))
+                          }
+                        />
+                      ) : (
+                        lesson.lessonDate // already Dutch for display
+                      )}
+                    </td>
+
+                    {/* Start */}
+                    <td>
+                      {editingLessonId === lesson.id ? (
+                        <input
+                          type="time"
+                          value={(editData.startTime || '').slice(0, 5)}
+                          onChange={(e) => handleEditChange('startTime', e.target.value)}
+                        />
+                      ) : (
+                        (lesson.startTime || '').slice(0, 8)
+                      )}
+                    </td>
+
+                    {/* End */}
+                    <td>
+                      {editingLessonId === lesson.id ? (
+                        <input
+                          type="time"
+                          value={(editData.endTime || '').slice(0, 5)}
+                          onChange={(e) => handleEditChange('endTime', e.target.value)}
+                        />
+                      ) : (
+                        (lesson.endTime || '').slice(0, 8)
+                      )}
+                    </td>
+
+                    {/* Homework */}
+                    <td>
+                      {editingLessonId === lesson.id ? (
+                        <textarea
+                          value={editData.homework || ''}
+                          onChange={(e) => handleEditChange('homework', e.target.value)}
+                        />
+                      ) : (
+                        lesson.homework || '—'
+                      )}
+                    </td>
+
+                    {/* PDFs */}
                     <td>
                       {lesson.pdfFileNames?.length > 0
                         ? lesson.pdfFileNames.map((file, i) => (
@@ -205,13 +359,37 @@ export default function MyLessons() {
                           ))
                         : 'No files'}
                     </td>
+
+                    {/* Actions */}
                     <td>
-                      <button
-                        onClick={() => handleDeleteLesson(lesson.id)}
-                        style={{ background: 'crimson', color: 'white' }}
-                      >
-                        Delete
-                      </button>
+                      {editingLessonId === lesson.id ? (
+                        <>
+                          <button onClick={() => handleSaveEdit(lesson.id)}>
+                            Save
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            style={{ background: 'gray', color: 'white', marginLeft: '5px' }}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleEditClick(lesson)}
+                            style={{ background: '#d0a16d', color: 'black', marginRight: '5px' }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteLesson(lesson.id)}
+                            style={{ background: 'crimson', color: 'white' }}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -224,83 +402,8 @@ export default function MyLessons() {
               )}
             </tbody>
           </table>
-        ) : user.teacher ? (
-          <>
-            <p>
-              Your assigned teacher: <strong>{user.teacher.name}</strong> ({user.teacher.instrument})
-            </p>
-            <table className="table">
-              <caption>Scheduled Lessons</caption>
-              <thead>
-                <tr>
-                  <th>Instrument</th>
-                  <th>Date</th>
-                  <th>Start</th>
-                  <th>End</th>
-                  <th>Homework</th>
-                  <th>PDFs</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredLessons.length > 0 ? (
-                  filteredLessons.map((lesson) => (
-                    <tr key={lesson.id}>
-                      <td>{lesson.instrument}</td>
-                      <td>{lesson.lessonDate}</td>
-                      <td>{lesson.startTime}</td>
-                      <td>{lesson.endTime}</td>
-                      <td>
-                        {lesson.id ? (
-                          <Link to={`/homework/${lesson.id}`}>
-                            <button className="submit-btn">View Homework</button>
-                          </Link>
-                        ) : (
-                          '—'
-                        )}
-                      </td>
-                      <td>
-                        {lesson.pdfFileNames?.length > 0
-                          ? lesson.pdfFileNames.map((file, i) => (
-                              <div key={i}>
-                                <a
-                                  href={`${API_BASE}/api/lesson/file/${file}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  {file}
-                                </a>
-                              </div>
-                            ))
-                          : 'No files'}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="6" style={{ textAlign: 'center' }}>
-                      No lessons found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </>
         ) : (
-          <div className="assign-teacher">
-            <h2>Select a Teacher</h2>
-            <select
-              value={selectedTeacher}
-              onChange={(e) => setSelectedTeacher(e.target.value)}
-            >
-              <option value="">-- Select --</option>
-              {teachers.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.instrument})
-                </option>
-              ))}
-            </select>
-            <button onClick={handleTeacherAssign}>Assign Teacher</button>
-          </div>
+          <p>Only teachers can edit or delete lessons.</p>
         )}
       </div>
     </div>
