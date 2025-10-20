@@ -1,84 +1,79 @@
 import React, { useEffect, useState } from 'react';
-import { useUser } from '../Context/UserContext'; // <-- import logged in user
+import { useUser } from '../Context/UserContext';
 import '../App.css';
 
-const Admindashboard = () => {
-  const { user } = useUser(); // <-- get logged in user
-  const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+const ITEMS_PER_PAGE = 5;
 
-  const fetchStudents = () => {
+const Admindashboard = () => {
+  const { user } = useUser();
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // 🔹 Fetch all users except the logged-in admin
+  const fetchUsers = () => {
     fetch('http://localhost:8080/api/user/all', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
-        console.log("Fetched data:", data);
-        console.log("Logged-in user:", user);
-
-        // ✅ Only filter out the logged-in account
+        // ✅ Filter out the current admin AND all admin accounts
         const filtered = Array.isArray(data)
-          ? data.filter(s => String(s.id) !== String(user?.id))
+          ? data.filter(
+              u =>
+                String(u.id) !== String(user?.id) &&
+                u.role.toUpperCase() !== 'ADMIN'
+            )
           : [];
-
-        console.log("Filtered students:", filtered);
-        setStudents(filtered);
+        setUsers(filtered);
         setLoading(false);
       })
       .catch(err => {
-        console.error("Error fetching students:", err);
-        setStudents([]);
+        console.error('Error fetching users:', err);
+        setUsers([]);
         setLoading(false);
       });
   };
 
   useEffect(() => {
-    if (user) {
-      fetchStudents();
-    }
+    if (user) fetchUsers();
   }, [user]);
 
+  // 🔹 Toggle user role (teacher <-> student)
   const toggleUserRole = (userId) => {
     fetch(`http://localhost:8080/api/user/toggle-role/${userId}`, {
       method: 'PATCH',
       credentials: 'include'
     })
-      .then(res => {
-        if (res.ok) {
-          fetchStudents();
-        } else {
-          alert("Failed to update user role.");
-        }
-      })
-      .catch(err => console.error("Toggle role error:", err));
+      .then(res => (res.ok ? fetchUsers() : alert('Failed to update user role.')))
+      .catch(err => console.error('Toggle role error:', err));
   };
 
+  // 🔹 Delete user
   const deleteUser = (userId) => {
-    if (!window.confirm("Are you sure you want to delete this user?")) return;
-
+    if (!window.confirm('Are you sure you want to delete this user?')) return;
     fetch(`http://localhost:8080/api/user/delete/${userId}`, {
       method: 'DELETE',
       credentials: 'include'
     })
-      .then(res => {
-        if (res.ok) {
-          fetchStudents();
-        } else {
-          alert("Failed to delete user.");
-        }
-      })
-      .catch(err => console.error("Delete error:", err));
+      .then(res => (res.ok ? fetchUsers() : alert('Failed to delete user.')))
+      .catch(err => console.error('Delete error:', err));
   };
 
   if (loading) return <div>Loading...</div>;
 
-  // Filter students by search (supports name + email)
-  const filteredStudents = students.filter(s => {
-    if (!search.trim()) return true; // show all if search is empty
+  // 🔍 Filter users by name or email
+  const filteredUsers = users.filter(u => {
+    if (!search.trim()) return true;
     return (
-      s.name?.toLowerCase().includes(search.toLowerCase()) ||
-      s.email?.toLowerCase().includes(search.toLowerCase())
+      u.name?.toLowerCase().includes(search.toLowerCase()) ||
+      u.email?.toLowerCase().includes(search.toLowerCase())
     );
   });
+
+  // 🔹 Pagination
+  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   return (
     <div className="app-container">
@@ -93,7 +88,10 @@ const Admindashboard = () => {
             type="text"
             placeholder="Search by name or email..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1); // reset to first page when searching
+            }}
           />
         </div>
 
@@ -110,39 +108,60 @@ const Admindashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredStudents.map((student, index) => (
-                <tr key={index}>
-                  <td>{student.name}</td>
-                  <td className="email-col">{student.email}</td>
-                  <td>{student.instrument || 'N/A'}</td>
-                  <td>{student.role}</td>
-                  <td>
-                    <div className="action-buttons">
-                      <button
-                        className="action-btn role-btn"
-                        onClick={() => toggleUserRole(student.id)}
-                      >
-                        {student.role === 'TEACHER'
-                          ? 'Demote to Student'
-                          : 'Promote to Teacher'}
-                      </button>
-                      <button
-                        className="action-btn delete-btn"
-                        onClick={() => deleteUser(student.id)}
-                      >
-                        Delete
-                      </button>
-                    </div>
+              {paginatedUsers.length > 0 ? (
+                paginatedUsers.map((u, index) => (
+                  <tr key={index}>
+                    <td>{u.name}</td>
+                    <td className="email-col">{u.email}</td>
+                    <td>{u.instrument || 'N/A'}</td>
+                    <td>{u.role}</td>
+                    <td>
+                      <div className="action-buttons">
+                        <button
+                          className="action-btn role-btn"
+                          onClick={() => toggleUserRole(u.id)}
+                        >
+                          {u.role === 'TEACHER'
+                            ? 'Demote to Student'
+                            : 'Promote to Teacher'}
+                        </button>
+                        <button
+                          className="action-btn delete-btn"
+                          onClick={() => deleteUser(u.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center' }}>
+                    No users found.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
 
+          {/* 🔹 Pagination controls */}
           <div className="pagination">
-            <button disabled>Previous</button>
-            <span>Page 1 of 1</span>
-            <button disabled>Next</button>
+            <button
+              onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </button>
+            <span>
+              Page {currentPage} of {totalPages || 1}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+              disabled={currentPage === totalPages || totalPages === 0}
+            >
+              Next
+            </button>
           </div>
         </div>
       </div>
