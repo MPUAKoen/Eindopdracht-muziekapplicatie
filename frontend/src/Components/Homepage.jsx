@@ -1,4 +1,3 @@
-// src/Components/Homepage.jsx
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../Context/UserContext';
 import '../App.css';
@@ -23,8 +22,6 @@ const Homepage = () => {
   const { user, loading } = useUser();
 
   const [upcomingLessons, setUpcomingLessons] = useState([]);
-
-  // Working on pieces state
   const [workingPieces, setWorkingPieces] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [title, setTitle] = useState('');
@@ -38,7 +35,7 @@ const Homepage = () => {
     }
   }, [user]);
 
-  // Load upcoming lessons from backend
+  // Load only upcoming (future) lessons
   useEffect(() => {
     if (loading || !user) return;
 
@@ -48,11 +45,17 @@ const Homepage = () => {
     fetch(`${API_BASE}${path}`, { credentials: 'include' })
       .then(res => (res.ok ? res.json() : []))
       .then(data => {
+        const now = new Date();
         const toMs = (d, t) => Date.parse(`${d}T${t || '00:00:00'}`);
-        const sorted = (Array.isArray(data) ? data : [])
-          .slice()
+
+        const upcoming = (Array.isArray(data) ? data : [])
+          .filter(l => {
+            const lessonTime = toMs(l.lessonDate, l.startTime);
+            return !isNaN(lessonTime) && lessonTime >= now.getTime();
+          })
           .sort((a, b) => toMs(a.lessonDate, a.startTime) - toMs(b.lessonDate, b.startTime));
-        setUpcomingLessons(sorted.slice(0, 5));
+
+        setUpcomingLessons(upcoming.slice(0, 5));
       })
       .catch(() => setUpcomingLessons([]));
   }, [user, loading]);
@@ -112,6 +115,7 @@ const Homepage = () => {
         : lesson.teacher?.name ?? lesson.teacherName;
     return `${lesson.instrument || 'Lesson'}${counterpart ? ` — ${counterpart}` : ''}`;
   };
+
   const asTimeLabel = (lesson) =>
     `${lesson.lessonDate} ${lesson.startTime ?? ''}${lesson.endTime ? `–${lesson.endTime}` : ''}`;
 
@@ -133,7 +137,7 @@ const Homepage = () => {
             </tbody>
           </table>
 
-          {/* Upcoming lessons */}
+          {/* Upcoming Lessons */}
           <table className="widget-table">
             <caption>Upcoming Lessons</caption>
             <thead>
@@ -160,7 +164,7 @@ const Homepage = () => {
             </tbody>
           </table>
 
-          {/* Working on pieces */}
+          {/* Working on Pieces */}
           <div className="table-wrapper">
             <table className="table">
               <caption>Pieces that I am learning</caption>
@@ -184,7 +188,7 @@ const Homepage = () => {
                   </tr>
                 ))}
 
-                {/* Input row inside the table */}
+                {/* Input row */}
                 <tr className="input-row">
                   <td>
                     <input
