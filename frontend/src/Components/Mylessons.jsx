@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../Context/UserContext';
-import { Link } from 'react-router-dom';
 import '../App.css';
 
 const API_BASE = 'http://localhost:8080';
@@ -35,9 +34,10 @@ export default function MyLessons() {
   const [selectedDate, setSelectedDate] = useState(() =>
     new Date().toISOString().split('T')[0]
   );
+
   const role = user?.role?.toUpperCase();
 
-  // Fetch lessons
+  // === Fetch lessons ===
   useEffect(() => {
     if (loading || !user) return;
     const path = role === 'TEACHER' ? '/api/lesson/teacher' : '/api/lesson/student';
@@ -45,13 +45,11 @@ export default function MyLessons() {
     fetch(`${API_BASE}${path}`, { credentials: 'include' })
       .then(res => (res.ok ? res.json() : []))
       .then(data => {
-        // Server may return ISO dates (from projection) or Dutch if you later switch.
-        // Normalize to Dutch for display here:
         const normalized = (Array.isArray(data) ? data : []).map(l => ({
           ...l,
           lessonDate: l.lessonDate?.includes('-') && l.lessonDate.indexOf('-') === 4
-            ? toDutchFromIso(l.lessonDate) // ISO -> Dutch
-            : l.lessonDate,                // already Dutch
+            ? toDutchFromIso(l.lessonDate)
+            : l.lessonDate,
         }));
         const sorted = normalized.sort(
           (a, b) =>
@@ -63,7 +61,7 @@ export default function MyLessons() {
       .catch(() => setMyLessons([]));
   }, [user, loading, role]);
 
-  // Teachers list (for students without one)
+  // === Fetch available teachers (for unassigned students) ===
   useEffect(() => {
     if (loading) return;
     if (user && role !== 'TEACHER' && !user.teacher) {
@@ -74,7 +72,7 @@ export default function MyLessons() {
     }
   }, [user, loading, role]);
 
-  // Assigned students for teacher dropdown
+  // === Assigned students (for teacher dropdown in lesson editing) ===
   useEffect(() => {
     if (role === 'TEACHER') {
       fetch(`${API_BASE}/api/user/my-students`, { credentials: 'include' })
@@ -84,6 +82,7 @@ export default function MyLessons() {
     }
   }, [role]);
 
+  // === Assign teacher to student ===
   const handleTeacherAssign = () => {
     if (!selectedTeacher) return;
     fetch(`${API_BASE}/api/user/assign-teacher/${selectedTeacher}`, {
@@ -99,7 +98,7 @@ export default function MyLessons() {
       .catch(console.error);
   };
 
-  // Filter by day/week (selectedDate is ISO; lessons are Dutch)
+  // === Filter by day/week ===
   const filteredLessons = myLessons.filter(lesson => {
     const lessonDate = parseDutchDateTime(lesson.lessonDate);
     const selected = new Date(selectedDate);
@@ -119,10 +118,9 @@ export default function MyLessons() {
     }
   });
 
+  // === Delete lesson (teacher only) ===
   const handleDeleteLesson = async (lessonId) => {
-    if (!lessonId) return;
-    if (!window.confirm('Delete this lesson?')) return;
-
+    if (!lessonId || !window.confirm('Delete this lesson?')) return;
     try {
       const res = await fetch(`${API_BASE}/api/lesson/${lessonId}`, {
         method: 'DELETE',
@@ -136,25 +134,21 @@ export default function MyLessons() {
     }
   };
 
-  // Inline edit
+  // === Edit helpers (teacher only) ===
   const handleEditClick = (lesson) => {
     setEditingLessonId(lesson.id);
-    setEditData({ ...lesson }); // keep date in Dutch in state
+    setEditData({ ...lesson });
   };
-
   const handleCancelEdit = () => {
     setEditingLessonId(null);
     setEditData({});
   };
-
   const handleEditChange = (field, value) => {
     setEditData(prev => ({ ...prev, [field]: value }));
   };
-
   const handleSaveEdit = async (lessonId) => {
     const payload = {
       ...editData,
-      // send Dutch date (controller accepts dd-MM-yyyy and ISO)
       lessonDate: editData.lessonDate,
       startTime: padSeconds(editData.startTime),
       endTime: padSeconds(editData.endTime),
@@ -178,7 +172,7 @@ export default function MyLessons() {
     }
   };
 
-  // Navigation helpers
+  // === Date navigation ===
   const renderDateLabel = () => {
     if (viewMode === 'day') {
       return new Date(selectedDate).toLocaleDateString(undefined, {
@@ -196,13 +190,11 @@ export default function MyLessons() {
       return `${fmt(start)} – ${fmt(end)}`;
     }
   };
-
   const handlePrev = () => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() - (viewMode === 'week' ? 7 : 1));
     setSelectedDate(d.toISOString().split('T')[0]);
   };
-
   const handleNext = () => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() + (viewMode === 'week' ? 7 : 1));
@@ -211,6 +203,7 @@ export default function MyLessons() {
 
   if (loading) return <div>Loading…</div>;
 
+  // === Render ===
   return (
     <div className="mainpage">
       <div className="header">
@@ -232,7 +225,8 @@ export default function MyLessons() {
           </button>
         </div>
 
-        {role === 'TEACHER' ? (
+        {/* === TEACHER MODE === */}
+        {role === 'TEACHER' && (
           <table className="table">
             <caption>Scheduled Lessons</caption>
             <thead>
@@ -251,7 +245,6 @@ export default function MyLessons() {
               {filteredLessons.length > 0 ? (
                 filteredLessons.map((lesson) => (
                   <tr key={lesson.id}>
-                    {/* Instrument */}
                     <td>
                       {editingLessonId === lesson.id ? (
                         <select
@@ -269,8 +262,6 @@ export default function MyLessons() {
                         lesson.instrument
                       )}
                     </td>
-
-                    {/* Student */}
                     <td>
                       {editingLessonId === lesson.id ? (
                         <select
@@ -279,20 +270,15 @@ export default function MyLessons() {
                         >
                           <option value="">Select student</option>
                           {assignedStudents.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.name}
-                            </option>
+                            <option key={s.id} value={s.id}>{s.name}</option>
                           ))}
                         </select>
                       ) : (
                         lesson.student?.name ?? lesson.studentName
                       )}
                     </td>
-
-                    {/* Date */}
                     <td>
                       {editingLessonId === lesson.id ? (
-                        // date input needs ISO; convert Dutch->ISO for the input value
                         <input
                           type="date"
                           value={toIsoFromDutch(editData.lessonDate || lesson.lessonDate || '')}
@@ -301,11 +287,9 @@ export default function MyLessons() {
                           }
                         />
                       ) : (
-                        lesson.lessonDate // already Dutch for display
+                        lesson.lessonDate
                       )}
                     </td>
-
-                    {/* Start */}
                     <td>
                       {editingLessonId === lesson.id ? (
                         <input
@@ -317,8 +301,6 @@ export default function MyLessons() {
                         (lesson.startTime || '').slice(0, 8)
                       )}
                     </td>
-
-                    {/* End */}
                     <td>
                       {editingLessonId === lesson.id ? (
                         <input
@@ -330,8 +312,6 @@ export default function MyLessons() {
                         (lesson.endTime || '').slice(0, 8)
                       )}
                     </td>
-
-                    {/* Homework */}
                     <td>
                       {editingLessonId === lesson.id ? (
                         <textarea
@@ -342,8 +322,6 @@ export default function MyLessons() {
                         lesson.homework || '—'
                       )}
                     </td>
-
-                    {/* PDFs */}
                     <td>
                       {lesson.pdfFileNames?.length > 0
                         ? lesson.pdfFileNames.map((file, i) => (
@@ -359,51 +337,97 @@ export default function MyLessons() {
                           ))
                         : 'No files'}
                     </td>
-
-                    {/* Actions */}
                     <td>
                       {editingLessonId === lesson.id ? (
                         <>
-                          <button onClick={() => handleSaveEdit(lesson.id)}>
-                            Save
-                          </button>
-                          <button
-                            onClick={handleCancelEdit}
-                            style={{ background: 'gray', color: 'white', marginLeft: '5px' }}
-                          >
-                            Cancel
-                          </button>
+                          <button onClick={() => handleSaveEdit(lesson.id)}>Save</button>
+                          <button onClick={handleCancelEdit}>Cancel</button>
                         </>
                       ) : (
                         <>
-                          <button
-                            onClick={() => handleEditClick(lesson)}
-                            style={{ background: '#d0a16d', color: 'black', marginRight: '5px' }}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteLesson(lesson.id)}
-                            style={{ background: 'crimson', color: 'white' }}
-                          >
-                            Delete
-                          </button>
+                          <button onClick={() => handleEditClick(lesson)}>Edit</button>
+                          <button onClick={() => handleDeleteLesson(lesson.id)}>Delete</button>
                         </>
                       )}
                     </td>
                   </tr>
                 ))
               ) : (
-                <tr>
-                  <td colSpan="8" style={{ textAlign: 'center' }}>
-                    No lessons found.
-                  </td>
-                </tr>
+                <tr><td colSpan="8" style={{ textAlign: 'center' }}>No lessons found.</td></tr>
               )}
             </tbody>
           </table>
-        ) : (
-          <p>Only teachers can edit or delete lessons.</p>
+        )}
+
+        {/* === STUDENT MODE === */}
+        {role !== 'TEACHER' && (
+          <>
+            {!user.teacher ? (
+              <div>
+                <h3>Select your teacher</h3>
+                <div className="search-bar">
+                  <select
+                    value={selectedTeacher}
+                    onChange={(e) => setSelectedTeacher(e.target.value)}
+                  >
+                    <option value="">Select a teacher</option>
+                    {teachers.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} – {t.instrument || 'No instrument'}
+                      </option>
+                    ))}
+                  </select>
+                  <button onClick={handleTeacherAssign}>Assign Teacher</button>
+                </div>
+              </div>
+            ) : (
+              <table className="table">
+                <caption>My Lessons</caption>
+                <thead>
+                  <tr>
+                    <th>Instrument</th>
+                    <th>Teacher</th>
+                    <th>Date</th>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Homework</th>
+                    <th>PDFs</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLessons.length > 0 ? (
+                    filteredLessons.map((lesson) => (
+                      <tr key={lesson.id}>
+                        <td>{lesson.instrument}</td>
+                        <td>{lesson.teacherName || user.teacher?.name}</td>
+                        <td>{lesson.lessonDate}</td>
+                        <td>{lesson.startTime}</td>
+                        <td>{lesson.endTime}</td>
+                        <td>{lesson.homework || '—'}</td>
+                        <td>
+                          {lesson.pdfFileNames?.length > 0
+                            ? lesson.pdfFileNames.map((file, i) => (
+                                <div key={i}>
+                                  <a
+                                    href={`${API_BASE}/api/lesson/file/${file}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    {file}
+                                  </a>
+                                </div>
+                              ))
+                            : 'No files'}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr><td colSpan="7">No lessons scheduled.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            )}
+          </>
         )}
       </div>
     </div>

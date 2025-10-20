@@ -1,7 +1,9 @@
-// src/Schedule.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useUser } from '../Context/UserContext';
+import DatePicker from 'react-datepicker';
+import { format, setHours, setMinutes } from 'date-fns';
+import 'react-datepicker/dist/react-datepicker.css';
 import '../App.css';
 
 const API_BASE = 'http://localhost:8080';
@@ -13,14 +15,14 @@ const Schedule = () => {
   const instruments = ['Piano', 'Guitar', 'Violin', 'Voice', 'Drums'];
   const [instrument, setInstrument] = useState('');
   const [studentId, setStudentId] = useState('');
-  const [lessonDate, setLessonDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [lessonDate, setLessonDate] = useState(null);
+  const [startTime, setStartTime] = useState(() => setHours(setMinutes(new Date(), 0), 9)); // default 09:00
+  const [endTime, setEndTime] = useState(() => setHours(setMinutes(new Date(), 30), 9));   // optional: default 09:30
   const [homework, setHomework] = useState('');
   const [pdfFiles, setPdfFiles] = useState([]);
   const fileInputRef = useRef(null);
 
-  // 1) After session loads, fetch only your assigned students
+  // Fetch teacher’s students
   useEffect(() => {
     if (loading) return;
     if (!user || user.role !== 'TEACHER') {
@@ -45,12 +47,16 @@ const Schedule = () => {
       return;
     }
 
+    const formattedDate = format(lessonDate, 'dd-MM-yyyy');
+    const formattedStart = format(startTime, 'HH:mm:ss');
+    const formattedEnd = format(endTime, 'HH:mm:ss');
+
     const formData = new FormData();
     formData.append('instrument', instrument);
-    formData.append('studentId', studentId);        // ← send ID, not name
-    formData.append('lessonDate', lessonDate);
-    formData.append('startTime', startTime);
-    formData.append('endTime', endTime);
+    formData.append('studentId', studentId);
+    formData.append('lessonDate', formattedDate);
+    formData.append('startTime', formattedStart);
+    formData.append('endTime', formattedEnd);
     formData.append('homework', homework);
     pdfFiles.forEach((file) => formData.append('pdfFiles', file));
 
@@ -62,9 +68,9 @@ const Schedule = () => {
       alert('Lesson scheduled successfully!');
       setInstrument('');
       setStudentId('');
-      setLessonDate('');
-      setStartTime('');
-      setEndTime('');
+      setLessonDate(null);
+      setStartTime(setHours(setMinutes(new Date(), 0), 9)); // reset to 09:00
+      setEndTime(setHours(setMinutes(new Date(), 30), 9));   // reset to 09:30
       setHomework('');
       setPdfFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -74,15 +80,14 @@ const Schedule = () => {
     }
   };
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+  if (loading) return <div>Loading...</div>;
 
   return (
     <div className="mainpage">
       <div className="header">
         <h1>Schedule a Lesson</h1>
       </div>
+
       <div className="dashboard">
         {user.role !== 'TEACHER' ? (
           <p style={{ color: 'red' }}>Only teachers can schedule lessons.</p>
@@ -90,6 +95,7 @@ const Schedule = () => {
           <p style={{ color: 'red' }}>You currently have no students assigned.</p>
         ) : (
           <form onSubmit={handleSubmit} className="lesson-form">
+            {/* Instrument */}
             <div className="form-group">
               <label htmlFor="instrument">Instrument</label>
               <select
@@ -107,6 +113,7 @@ const Schedule = () => {
               </select>
             </div>
 
+            {/* Student */}
             <div className="form-group">
               <label htmlFor="student">Student</label>
               <select
@@ -124,39 +131,58 @@ const Schedule = () => {
               </select>
             </div>
 
+            {/* Calendar popup (Dutch format) */}
             <div className="form-group">
               <label htmlFor="date">Date</label>
-              <input
-                type="date"
+              <DatePicker
                 id="date"
-                value={lessonDate}
-                onChange={(e) => setLessonDate(e.target.value)}
+                selected={lessonDate}
+                onChange={(date) => setLessonDate(date)}
+                dateFormat="dd-MM-yyyy"
+                placeholderText="Select a date"
+                className="date-picker-input"
+                calendarStartDay={1}
                 required
               />
             </div>
 
+            {/* Start Time (default 09:00) */}
             <div className="form-group">
               <label htmlFor="startTime">Start Time</label>
-              <input
-                type="time"
-                id="startTime"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
+              <DatePicker
+                selected={startTime}
+                onChange={(time) => setStartTime(time)}
+                showTimeSelect
+                showTimeSelectOnly
+                timeIntervals={5}
+                timeCaption="Start"
+                dateFormat="HH:mm"
+                timeFormat="HH:mm"
+                placeholderText="Select time"
+                className="date-picker-input"
                 required
               />
             </div>
 
+            {/* End Time */}
             <div className="form-group">
               <label htmlFor="endTime">End Time</label>
-              <input
-                type="time"
-                id="endTime"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
+              <DatePicker
+                selected={endTime}
+                onChange={(time) => setEndTime(time)}
+                showTimeSelect
+                showTimeSelectOnly
+                timeIntervals={5}
+                timeCaption="End"
+                dateFormat="HH:mm"
+                timeFormat="HH:mm"
+                placeholderText="Select time"
+                className="date-picker-input"
                 required
               />
             </div>
 
+            {/* Homework */}
             <div className="form-group">
               <label htmlFor="homework">Homework</label>
               <textarea
@@ -166,6 +192,7 @@ const Schedule = () => {
               />
             </div>
 
+            {/* File upload */}
             <div className="form-group">
               <label htmlFor="pdfFiles">Upload PDFs</label>
               <input

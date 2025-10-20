@@ -62,7 +62,7 @@ public class SecurityConfig {
     }
 
     /**
-     * 🔑 Global CORS configuration to allow your React app on port 5173.
+     * Global CORS configuration to allow your React app on port 5173.
      * This is REQUIRED for fetch(..., { credentials: "include" }) to work.
      */
     @Bean
@@ -79,7 +79,7 @@ public class SecurityConfig {
     }
 
     /**
-     * 🔑 Password encoder for user passwords
+     *Password encoder for user passwords
      */
     @Bean
     public PasswordEncoder passwordEncoder() {

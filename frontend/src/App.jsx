@@ -13,6 +13,7 @@ import Admindashboard from "./Components/Admindashboard.jsx";
 import MyStudents from './Components/MyStudents.jsx';
 import { UserProvider } from './Context/UserContext';
 import ProtectedRoute from "./Components/ProtectedRoute";
+import StudentAboutPage from './Components/StudentAboutPage.jsx';
 
 const Navbar = () => <div className="navbar" />;
 
@@ -35,6 +36,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      
 
       {/* Students + Teachers */}
       <Route
@@ -73,6 +75,8 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route path="/student/:id" element={<StudentAboutPage />} />
+
 
       {/* Admin only */}
       <Route
