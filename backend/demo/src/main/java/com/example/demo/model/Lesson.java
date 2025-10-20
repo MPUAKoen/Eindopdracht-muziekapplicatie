@@ -1,7 +1,6 @@
 // src/main/java/com/example/demo/model/Lesson.java
 package com.example.demo.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
