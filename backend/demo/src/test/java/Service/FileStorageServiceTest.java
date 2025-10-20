@@ -42,7 +42,7 @@ class FileStorageServiceTest {
         }
     }
 
-    // ✅ 1. storeFiles should save all files and return filenames
+    // storeFiles should save all files and return filenames
     @Test
     void storeFiles_ShouldSaveFiles_AndReturnFilenames() throws IOException {
         MockMultipartFile file1 = new MockMultipartFile("files", "file1.pdf", "application/pdf", "Hello".getBytes());
@@ -55,7 +55,7 @@ class FileStorageServiceTest {
         assertThat(Files.exists(testUploadDir.resolve("file2.pdf"))).isTrue();
     }
 
-    // ✅ 2. storeFiles should throw RuntimeException when IOException occurs
+    // storeFiles should throw RuntimeException when IOException occurs
     @Test
     void storeFiles_WhenIOException_ShouldThrowRuntimeException() {
         assertThatThrownBy(() -> {
@@ -66,7 +66,7 @@ class FileStorageServiceTest {
         }).isInstanceOf(RuntimeException.class);
     }
 
-    // ✅ 3. load should return a normalized absolute path
+    // load should return a normalized absolute path
     @Test
     void load_ShouldReturnNormalizedPath() {
         Path loaded = fileStorageService.load("test.pdf");

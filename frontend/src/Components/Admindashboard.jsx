@@ -71,7 +71,7 @@ const Admindashboard = () => {
 
   if (loading) return <div>Loading...</div>;
 
-  // ✅ Filter students by search (supports name + email)
+  // Filter students by search (supports name + email)
   const filteredStudents = students.filter(s => {
     if (!search.trim()) return true; // show all if search is empty
     return (
