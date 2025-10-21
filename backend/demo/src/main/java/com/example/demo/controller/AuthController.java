@@ -3,28 +3,40 @@ package com.example.demo.controller;
 import com.example.demo.model.Piece;
 import com.example.demo.model.User;
 import com.example.demo.repository.UserRepository;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
-import java.util.Optional;
+
 import java.util.List;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import org.springframework.web.server.ResponseStatusException;
 
-/**
- * Handles registration, authentication, teacher/student management,
- * and user CRUD endpoints for the music application.
- */
+@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 @RestController
 @RequestMapping("/api/user")
 public class AuthController {
@@ -37,7 +49,7 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // === Register ===
+    // Register
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody RegisterRequest request, HttpServletRequest httpRequest) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
@@ -51,9 +63,8 @@ public class AuthController {
         newUser.setInstrument(request.getInstrument());
         userRepository.save(newUser);
 
-        logger.info("✅ Registered new user: {}", newUser.getEmail());
+        logger.info("Registered new user: {}", newUser.getEmail());
 
-        // Auto-login after registration
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 newUser.getEmail(), null, newUser.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -63,7 +74,7 @@ public class AuthController {
         return ResponseEntity.ok(buildUserResponse(newUser));
     }
 
-    // === Login ===
+    // Login
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         Optional<User> optionalUser = userRepository.findByEmail(request.getEmail());
@@ -76,14 +87,14 @@ public class AuthController {
                 HttpSession session = httpRequest.getSession(true);
                 session.setAttribute("SPRING_SECURITY_CONTEXT", SecurityContextHolder.getContext());
 
-                logger.info("✅ Login successful: {}", user.getEmail());
+                logger.info("Login successful: {}", user.getEmail());
                 return ResponseEntity.ok(buildUserResponse(user));
             }
         }
         return ResponseEntity.badRequest().body("Invalid credentials");
     }
 
-    // === Get current user ===
+    // Get current user
     @GetMapping("/current")
     public ResponseEntity<?> getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -97,13 +108,13 @@ public class AuthController {
         return ResponseEntity.ok(buildUserResponse(user));
     }
 
-    // === Get all users ===
+    // Get all users
     @GetMapping("/all")
     public ResponseEntity<List<User>> getAllUsers() {
         return ResponseEntity.ok(userRepository.findAll());
     }
 
-    // === Get specific user by ID (for teachers/admins to view student profile) ===
+    // Get specific user by ID
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('TEACHER','ADMIN')")
     public ResponseEntity<?> getUserById(@PathVariable Long id) {
@@ -112,7 +123,7 @@ public class AuthController {
         return ResponseEntity.ok(user);
     }
 
-    // === Get all teachers ===
+    // Get all teachers
     @GetMapping("/teachers")
     public ResponseEntity<List<User>> getTeachers() {
         List<User> teachers = userRepository.findByRole("TEACHER");
@@ -124,17 +135,15 @@ public class AuthController {
                 .body(teachers);
     }
 
-    // === Toggle role (promote/demote) ===
+    // Toggle role
     @PatchMapping("/toggle-role/{userId}")
     public ResponseEntity<?> toggleUserRole(@PathVariable Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        // --- Demote TEACHER → USER
         if ("TEACHER".equalsIgnoreCase(user.getRole())) {
-            logger.info("⬇️ Demoting teacher {}", user.getEmail());
+            logger.info("Demoting teacher {}", user.getEmail());
 
-            // Detach all students from this teacher
             userRepository.findAll().forEach(student -> {
                 if (student.getTeacher() != null && student.getTeacher().getId().equals(user.getId())) {
                     student.setTeacher(null);
@@ -147,11 +156,9 @@ public class AuthController {
             return ResponseEntity.ok("Teacher demoted to USER");
         }
 
-        // --- Promote USER → TEACHER
         if ("USER".equalsIgnoreCase(user.getRole())) {
-            logger.info("⬆️ Promoting user {}", user.getEmail());
+            logger.info("Promoting user {}", user.getEmail());
 
-            // Unlink from old teacher if exists
             if (user.getTeacher() != null) {
                 User oldTeacher = user.getTeacher();
                 oldTeacher.getUsers().remove(user);
@@ -167,7 +174,7 @@ public class AuthController {
         return ResponseEntity.badRequest().body("Invalid role transition");
     }
 
-    // === Assign teacher to a student ===
+    // Assign teacher to current student
     @PatchMapping("/assign-teacher/{teacherId}")
     public ResponseEntity<?> assignTeacher(@PathVariable Long teacherId, Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated())
@@ -183,11 +190,11 @@ public class AuthController {
 
         student.setTeacher(teacher);
         userRepository.save(student);
-        logger.info("👩‍🏫 Assigned teacher {} to student {}", teacher.getId(), student.getId());
+        logger.info("Assigned teacher {} to student {}", teacher.getId(), student.getId());
         return ResponseEntity.ok(buildUserResponse(student));
     }
 
-    // === Unassign a student from the logged-in teacher ===
+    // Unassign a student from the logged-in teacher
     @PatchMapping("/unassign-student/{studentId}")
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<?> unassignStudent(@PathVariable Long studentId, Authentication authentication) {
@@ -208,11 +215,11 @@ public class AuthController {
 
         student.setTeacher(null);
         userRepository.save(student);
-        logger.info("🗑️ Teacher {} unassigned student {}", teacher.getEmail(), student.getEmail());
+        logger.info("Teacher {} unassigned student {}", teacher.getEmail(), student.getEmail());
         return ResponseEntity.noContent().build();
     }
 
-    // === Get my students (logged-in teacher) ===
+    // Get my students
     @GetMapping("/my-students")
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<List<User>> getMyStudents(Authentication authentication) {
@@ -231,7 +238,7 @@ public class AuthController {
         return ResponseEntity.ok(students);
     }
 
-    // === Delete user ===
+    // Delete user
     @DeleteMapping("/delete/{userId}")
     public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
         if (userRepository.findById(userId).isEmpty()) return ResponseEntity.notFound().build();
@@ -239,7 +246,52 @@ public class AuthController {
         return ResponseEntity.ok("User deleted successfully");
     }
 
-    // === DTOs ===
+    // Update current user's profile
+    @PatchMapping("/update-profile")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> updateProfile(@RequestBody UpdateProfileRequest req,
+                                           HttpServletRequest httpRequest) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
+        }
+
+        String currentEmail = auth.getName();
+        User user = userRepository.findByEmail(currentEmail)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (req.getEmail() != null) {
+            String newEmail = req.getEmail().trim();
+            if (!newEmail.equalsIgnoreCase(user.getEmail())) {
+                boolean taken = userRepository.findByEmail(newEmail).isPresent();
+                if (taken) {
+                    return ResponseEntity.status(HttpStatus.CONFLICT).body("Email is already in use");
+                }
+                user.setEmail(newEmail);
+            }
+        }
+
+        if (req.getName() != null) {
+            user.setName(req.getName().trim());
+        }
+        if (req.getInstrument() != null) {
+            user.setInstrument(req.getInstrument().trim());
+        }
+
+        userRepository.save(user);
+
+        if (req.getEmail() != null && !req.getEmail().trim().equalsIgnoreCase(currentEmail)) {
+            Authentication newAuth = new UsernamePasswordAuthenticationToken(
+                    user.getEmail(), null, user.getAuthorities());
+            SecurityContextHolder.getContext().setAuthentication(newAuth);
+            HttpSession session = httpRequest.getSession(true);
+            session.setAttribute("SPRING_SECURITY_CONTEXT", SecurityContextHolder.getContext());
+        }
+
+        return ResponseEntity.ok(buildUserResponse(user));
+    }
+
+    // DTOs
     public static class LoginRequest {
         private String email;
         private String password;
@@ -260,6 +312,18 @@ public class AuthController {
         public void setEmail(String email) { this.email = email; }
         public String getPassword() { return password; }
         public void setPassword(String password) { this.password = password; }
+        public String getInstrument() { return instrument; }
+        public void setInstrument(String instrument) { this.instrument = instrument; }
+    }
+
+    public static class UpdateProfileRequest {
+        private String name;
+        private String email;
+        private String instrument;
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
         public String getInstrument() { return instrument; }
         public void setInstrument(String instrument) { this.instrument = instrument; }
     }
@@ -305,7 +369,7 @@ public class AuthController {
         }
     }
 
-    // === Helper for building JSON responses ===
+    // Build JSON response for current user
     private CurrentUserResponse buildUserResponse(User user) {
         TeacherDto teacherDto = null;
         if (user.getTeacher() != null) {

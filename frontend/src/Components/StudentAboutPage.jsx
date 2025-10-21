@@ -6,7 +6,7 @@ const API_BASE = 'http://localhost:8080';
 
 // Helper functions
 const sortByDateAdded = (data) => {
-  return data.sort((a, b) => {
+  return (data ? [...data] : []).sort((a, b) => {
     if (a.dateAdded && b.dateAdded) {
       return new Date(b.dateAdded) - new Date(a.dateAdded);
     }
@@ -16,8 +16,8 @@ const sortByDateAdded = (data) => {
 
 const itemsPerPage = 5;
 const paginate = (data, currentPage, itemsPerPage) =>
-  data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-const totalPages = (data) => Math.ceil((data?.length || 0) / itemsPerPage);
+  (data || []).slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+const totalPages = (data) => Math.ceil(((data || []).length) / itemsPerPage);
 
 const StudentAboutPage = () => {
   const { id } = useParams();
@@ -42,7 +42,7 @@ const StudentAboutPage = () => {
     return (
       <div className="mainpage">
         <div className="header">
-          <h1>Loading…</h1>
+          <h1>Loading...</h1>
         </div>
       </div>
     );
@@ -96,9 +96,7 @@ const StudentAboutPage = () => {
           Page {currentPage} of {totalPages(list)}
         </span>
         <button
-          onClick={() =>
-            setCurrentPage(Math.min(currentPage + 1, totalPages(list)))
-          }
+          onClick={() => setCurrentPage(Math.min(currentPage + 1, totalPages(list)))}
           disabled={currentPage === totalPages(list) || totalPages(list) === 0}
         >
           Next
@@ -107,13 +105,30 @@ const StudentAboutPage = () => {
     </div>
   );
 
+  const name = student.name ?? '-';
+  const email = student.email ?? '-';
+  const instrument = student.instrument ?? 'None';
+
   return (
     <div className="mainpage">
       <div className="header">
-        <h1>{student.name} — Profile</h1>
+        <h1>{student.name}: Profile</h1>
       </div>
 
       <img src="/src/assets/pfp.png" alt="Profile" className="profile-photo" />
+
+      {/* Compact summary table + spacing before pieces */}
+      <div className="user-summary-pair">
+        <table className="table mini-summary">
+          <tbody>
+            <tr>
+              <td><strong>Name:</strong> {name}</td>
+              <td><strong>Email:</strong> {email}</td>
+              <td><strong>Instrument:</strong> {instrument}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <div className="table-container">
         <div className="tables-flex">
