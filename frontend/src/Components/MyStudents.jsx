@@ -110,7 +110,7 @@ const MyStudents = () => {
                         style={{ cursor: 'pointer' }}
                       >
                         <td>{s.name}</td>
-                        <td className="email-col">{s.email}</td>
+                        <td >{s.email}</td>
                         <td>{s.instrument || '—'}</td>
                         <td>
                           <button
