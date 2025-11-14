@@ -1,4 +1,3 @@
-// src/Context/UserContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -18,8 +17,21 @@ export const UserProvider = ({ children }) => {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = userData => setUser(userData);
-  const logout = () => setUser(null);
+  const login = (userData) => setUser(userData);
+
+  const logout = async () => {
+    try {
+      await axios.post(
+        `${API_BASE}/api/user/logout`,
+        {},
+        { withCredentials: true }
+      );
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
+
+    setUser(null);
+  };
 
   return (
     <UserContext.Provider value={{ user, login, logout, loading }}>

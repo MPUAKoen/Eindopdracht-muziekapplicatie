@@ -1,4 +1,3 @@
-// src/main/java/com/example/demo/config/SecurityConfig.java
 package com.example.demo.config;
 
 import org.springframework.context.annotation.Bean;
@@ -47,10 +46,8 @@ public class SecurityConfig {
                 .anyRequest().permitAll()
             )
 
-            // Disable default Spring login page, since you have your own AuthController
             .formLogin().disable()
 
-            // Configure logout to return 200 OK instead of redirect
             .logout(logout -> logout
                 .logoutUrl("/api/user/logout")
                 .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.OK))
@@ -61,10 +58,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /**
-     * Global CORS configuration to allow your React app on port 5173.
-     * This is REQUIRED for fetch(..., { credentials: "include" }) to work.
-     */
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
@@ -78,9 +72,7 @@ public class SecurityConfig {
         return source;
     }
 
-    /**
-     *Password encoder for user passwords
-     */
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

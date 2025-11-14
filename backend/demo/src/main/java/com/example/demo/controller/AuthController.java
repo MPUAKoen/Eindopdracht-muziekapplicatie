@@ -5,6 +5,7 @@ import com.example.demo.model.User;
 import com.example.demo.repository.UserRepository;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 import java.util.List;
@@ -16,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -245,6 +247,27 @@ public class AuthController {
         userRepository.deleteById(userId);
         return ResponseEntity.ok("User deleted successfully");
     }
+    // LOGOUT
+@PostMapping("/logout")
+public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
+
+    // 1. Kill Spring Security session
+    request.getSession().invalidate();
+    SecurityContextHolder.clearContext();
+
+    // 2. Delete cookie
+    ResponseCookie cookie = ResponseCookie.from("JSESSIONID", "")
+            .path("/")
+            .httpOnly(true)
+            .secure(false)  // set true if using HTTPS
+            .sameSite("Lax")
+            .maxAge(0)
+            .build();
+    response.addHeader("Set-Cookie", cookie.toString());
+
+    return ResponseEntity.ok("Logged out");
+}
+
 
     // Update current user's profile
     @PatchMapping("/update-profile")
