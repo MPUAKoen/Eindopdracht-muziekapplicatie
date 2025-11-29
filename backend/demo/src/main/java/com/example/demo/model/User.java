@@ -3,9 +3,13 @@ package com.example.demo.model;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -56,6 +60,11 @@ public class User implements UserDetails {
     @OneToMany(mappedBy = "teacher", cascade = CascadeType.ALL)
     @JsonManagedReference
     private List<User> users = new ArrayList<>();
+
+    // === One to one PracticeLog (each user has exactly one log) ===
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private PracticeLog practiceLog;
 
     // === Constructors ===
     public User() {}
@@ -112,6 +121,9 @@ public class User implements UserDetails {
 
     public List<User> getUsers() { return users; }
     public void setUsers(List<User> users) { this.users = users; }
+
+    public PracticeLog getPracticeLog() { return practiceLog; }
+    public void setPracticeLog(PracticeLog practiceLog) { this.practiceLog = practiceLog; }
 
     // === Utility helpers ===
     public void addUser(User user) {

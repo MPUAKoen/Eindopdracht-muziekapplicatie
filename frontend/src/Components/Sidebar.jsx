@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../Context/UserContext';
+import StudentPracticePopup from './StudentPracticePopup';
 import '../App.css';
 
 const Sidebar = () => {
@@ -8,16 +9,20 @@ const Sidebar = () => {
   const isAuthenticated = Boolean(user);
   const role = user?.role?.toUpperCase();
   const [isOpen, setIsOpen] = useState(false);
+  const [showPractice, setShowPractice] = useState(false);
+
+  const isStudent = role === 'USER';
 
   const getLink = (path) => (isAuthenticated ? path : '/login');
 
   const handleLogout = () => {
     logout();
-    setIsOpen(false); // close after logout
+    setIsOpen(false);
+    setShowPractice(false);
   };
 
   const handleLinkClick = () => {
-    setIsOpen(false); // close menu when navigating
+    setIsOpen(false);
   };
 
   return (
@@ -64,6 +69,23 @@ const Sidebar = () => {
                 </Link>
               </li>
             </>
+          )}
+
+          {/* Only STUDENTS: practice tracker popup */}
+          {isAuthenticated && isStudent && (
+            <li>
+              <button
+                type="button"
+                className="sidebar-icon-button"
+                onClick={() => setShowPractice((prev) => !prev)}
+              >
+                <img
+                  className="homeIcon"
+                  src="src\assets\performance-tracking-icon-can-be-600nw-2350304125.png"
+                  alt="Practice tracker"
+                />
+              </button>
+            </li>
           )}
 
           {/* Only ADMINS */}
@@ -129,6 +151,11 @@ const Sidebar = () => {
           </li>
         </ul>
       </aside>
+
+      <StudentPracticePopup
+        visible={showPractice && isAuthenticated && isStudent}
+        onClose={() => setShowPractice(false)}
+      />
     </>
   );
 };
