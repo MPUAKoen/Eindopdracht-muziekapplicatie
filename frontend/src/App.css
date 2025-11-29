@@ -855,3 +855,239 @@ header h1 {
 .user-summary-pair {
   margin-bottom: 16px; /* tweak to 20–24px if you want more */
 }
+
+/* Button that holds the practice icon in the sidebar */
+.sidebar-icon-button {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  width: 100%;
+}
+
+.sidebar-icon-button:focus {
+  outline: 2px solid #d0a16d;
+  outline-offset: 2px;
+}
+
+/* Practice popup panel */
+.practice-popup {
+  position: fixed;
+  left: 200px;           /* same as sidebar width */
+  top: 80px;
+  background: #333;
+  color: #f1f1f1;
+  border-radius: 10px;
+  padding: 16px 18px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  z-index: 1200;
+  width: 340px;
+  max-width: calc(100vw - 220px);
+  font-family: 'Garamond', serif;
+}
+
+.practice-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.practice-popup-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.practice-popup-close {
+  background: transparent;
+  border: none;
+  color: #f1f1f1;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.practice-popup-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* rows */
+.practice-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.practice-row-label {
+  font-weight: bold;
+  font-size: 0.95rem;
+}
+
+/* progress bar */
+.practice-progressbar {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: #555;
+  overflow: hidden;
+}
+
+.practice-progressbar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #8c6e3e, #d0a16d);
+  transition: width 0.3s ease;
+}
+
+/* small stats */
+.practice-row-meta {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8rem;
+  opacity: 0.9;
+}
+
+/* on small screens the popup should not be cut off */
+@media (max-width: 900px) {
+  .practice-popup {
+    left: 10px;
+    top: 70px;
+    width: calc(100vw - 20px);
+  }
+}
+
+/* Practice popup range dropdown */
+
+.practice-range-dropdown {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin: 0 0 12px;
+  position: relative;
+  font-family: "Garamond", "Georgia", serif;
+}
+
+.practice-range-label {
+  font-size: 14px;
+  color: white;
+  margin-right: 8px;
+}
+
+.practice-range-current {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: linear-gradient(to bottom, #fafafa, #f0f0f0);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #222;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+}
+
+.practice-range-current:hover {
+  background: linear-gradient(to bottom, #ffffff, #f5f5f5);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.practice-range-current:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.practice-range-arrow {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.practice-range-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 6px;
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+  z-index: 30;
+  min-width: 150px;
+}
+
+.practice-range-option {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: "Garamond", "Georgia", serif;
+  color: #333;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.practice-range-option:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.practice-range-option.active {
+  background: #f0f0ff;
+  color: #2f3ba4;
+  font-weight: 600;
+}
+
+
+.practice-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.practice-row-label {
+  font-weight: 600;
+  font-size: 15px;
+  color: white;
+}
+
+.practice-plus-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(47, 59, 164, 0.18);
+  background: radial-gradient(circle at 30% 30%, #fdfdff, #e0e3ff);
+  color: #2f3ba4;
+  font-size: 16px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(47, 59, 164, 0.25);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.12s ease;
+}
+
+.practice-plus-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(47, 59, 164, 0.32);
+  background: radial-gradient(circle at 30% 30%, #ffffff, #d4d8ff);
+}
+
+.practice-plus-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(47, 59, 164, 0.25);
+}
+
+.practice-plus-btn:disabled {
+  cursor: default;
+  opacity: 0.6;
+  box-shadow: none;
+}
