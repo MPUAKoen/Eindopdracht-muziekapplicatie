@@ -2,24 +2,26 @@
 # BACKEND (Java / Maven)
 ##############
 
-# Maven build output
 backend/demo/target/
 target/
 
 # Uploads (runtime directory must exist but be empty)
-uploads/*
-!uploads/.gitkeep
+backend/demo/uploads/*
+!backend/demo/uploads/.gitkeep
 
 ##############
 # FRONTEND (global fallback)
 ##############
 
-# Node modules (frontend handles itself, but root protects extra)
+# Node modules
 node_modules/
+frontend/node_modules/
 
-# Build output (frontend also has its own .gitignore)
+# Build output
 dist/
 build/
+frontend/dist/
+frontend/build/
 
 ##############
 # IDEs
