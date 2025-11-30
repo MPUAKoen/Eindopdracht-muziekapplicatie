@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useUser } from '../Context/UserContext';
+import { Link } from "react-router-dom";
 import '../App.css';
 
 const API_BASE = 'http://localhost:8080';
@@ -24,7 +25,6 @@ const parseDutchDateTime = (ddmmyyyy, time = '00:00:00') => {
 };
 const padSeconds = (t) => (t && t.length === 5 ? `${t}:00` : t || '00:00:00');
 
-// Date helpers for the pickers
 const dutchDateStrToDate = (ddmmyyyy) => {
   if (!ddmmyyyy) return null;
   const [d, m, y] = ddmmyyyy.split('-').map(Number);
@@ -94,7 +94,7 @@ export default function MyLessons() {
       .catch(() => setMyLessons([]));
   }, [user, loading, role]);
 
-  // === Fetch teachers (for students) ===
+  // === Fetch teachers (students) ===
   useEffect(() => {
     if (loading) return;
     if (user && role !== 'TEACHER' && !user.teacher) {
@@ -105,7 +105,7 @@ export default function MyLessons() {
     }
   }, [user, loading, role]);
 
-  // === Fetch students (for teachers) ===
+  // === Fetch students ===
   useEffect(() => {
     if (role === 'TEACHER') {
       fetch(`${API_BASE}/api/user/my-students`, { credentials: 'include' })
@@ -131,7 +131,7 @@ export default function MyLessons() {
       .catch(console.error);
   };
 
-  // === Filter lessons by day or week ===
+  // === Filter lessons ===
   const filteredLessons = myLessons.filter((lesson) => {
     const lessonDate = parseDutchDateTime(lesson.lessonDate);
     const selected = new Date(selectedDate);
@@ -161,14 +161,13 @@ export default function MyLessons() {
         method: 'DELETE',
         credentials: 'include',
       });
-      if (!res.ok) throw new Error(`Failed with status ${res.status}`);
-      setMyLessons((prev) => prev.filter((l) => (l.id ?? l.lessonId) !== lessonId));
+      if (!res.ok) throw new Error();
+      setMyLessons((prev) => prev.filter((l) => l.id !== lessonId));
       if (editingLessonId === lessonId) {
         setEditingLessonId(null);
         setEditData({});
       }
-    } catch (e) {
-      console.error('Delete failed:', e);
+    } catch {
       alert('Could not delete lesson.');
     }
   };
@@ -182,7 +181,6 @@ export default function MyLessons() {
       lessonDate: lesson.lessonDate || '',
       startTime: lesson.startTime || '',
       endTime: lesson.endTime || '',
-      homework: lesson.homework || '',
       studentId: lesson.student?.id ?? lesson.studentId ?? null,
     });
   };
@@ -196,10 +194,9 @@ export default function MyLessons() {
   const handleSaveEdit = async (lessonId) => {
     const payload = {
       instrument: editData.instrument,
-      lessonDate: editData.lessonDate, // dd-MM-yyyy for backend
+      lessonDate: editData.lessonDate,
       startTime: padSeconds(editData.startTime),
       endTime: padSeconds(editData.endTime),
-      homework: editData.homework,
       ...(editData.studentId ? { studentId: editData.studentId } : {}),
     };
 
@@ -211,11 +208,6 @@ export default function MyLessons() {
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || `HTTP ${res.status}`);
-      }
-
       const updated = await res.json();
 
       setMyLessons((prev) =>
@@ -223,13 +215,11 @@ export default function MyLessons() {
           l.id === lessonId
             ? {
                 ...l,
-                instrument: updated.instrument ?? payload.instrument,
-                lessonDate: updated.lessonDate ?? payload.lessonDate,
-                startTime: updated.startTime ?? payload.startTime,
-                endTime: updated.endTime ?? payload.endTime,
-                homework: updated.homework ?? payload.homework,
+                instrument: updated.instrument,
+                lessonDate: updated.lessonDate,
+                startTime: updated.startTime,
+                endTime: updated.endTime,
                 studentId: updated.studentId ?? l.studentId,
-                student: l.student, // keep nested if present
               }
             : l
         )
@@ -237,13 +227,12 @@ export default function MyLessons() {
 
       setEditingLessonId(null);
       setEditData({});
-    } catch (err) {
-      console.error(err);
-      alert(`Failed to update lesson. ${err.message}`);
+    } catch {
+      alert('Failed to update lesson.');
     }
   };
 
-  // === Date formatting and navigation ===
+  // === Date formatting ===
   const renderDateLabel = () => {
     const selected = new Date(selectedDate);
     const weekdays = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
@@ -256,18 +245,15 @@ export default function MyLessons() {
       return `${day} ${d}-${m}-${y}`;
     };
 
-    if (viewMode === 'day') {
-      return formatDay(selected);
-    } else {
-      const monday = new Date(selected);
-      const day = monday.getDay();
-      const diff = (day === 0 ? -6 : 1) - day;
-      monday.setDate(selected.getDate() + diff);
-      const sunday = new Date(monday);
-      sunday.setDate(monday.getDate() + 6);
+    if (viewMode === 'day') return formatDay(selected);
 
-      return `${formatDay(monday)} – ${formatDay(sunday)}`;
-    }
+    const monday = new Date(selected);
+    const day = monday.getDay();
+    const diff = (day === 0 ? -6 : 1) - day;
+    monday.setDate(selected.getDate() + diff);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    return `${formatDay(monday)} – ${formatDay(sunday)}`;
   };
 
   const handlePrev = () => {
@@ -291,7 +277,6 @@ export default function MyLessons() {
       </div>
 
       <div className="dashboard">
-        {/* Week or Day toggle */}
         <button
           className="lesson-toggle-right mobile-top-toggle"
           onClick={() => setViewMode(viewMode === 'day' ? 'week' : 'day')}
@@ -300,7 +285,6 @@ export default function MyLessons() {
           {viewMode === 'day' ? 'Week View' : 'Day View'}
         </button>
 
-        {/* Inline date and arrows */}
         <div className="lesson-date-header">
           <h2 className="lesson-title">
             <button onClick={handlePrev} className="lesson-arrow inline">‹</button>
@@ -321,8 +305,7 @@ export default function MyLessons() {
                   <th>Date</th>
                   <th>Start</th>
                   <th>End</th>
-                  <th>Homework</th>
-                  <th>PDFs</th>
+                  <th>Homework Page</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -331,7 +314,6 @@ export default function MyLessons() {
                   filteredLessons.map((lesson) => {
                     const isEditing = editingLessonId === lesson.id;
 
-                    // Precompute picker values from strings
                     const datePickerValue = isEditing
                       ? dutchDateStrToDate(editData.lessonDate)
                       : null;
@@ -377,104 +359,66 @@ export default function MyLessons() {
                           )}
                         </td>
 
-                        {/* Date picker */}
+                        {/* Date */}
                         <td>
                           {isEditing ? (
-                            <div className="form-group compact">
-                              <DatePicker
-                                selected={datePickerValue}
-                                onChange={(date) =>
-                                  handleEditChange('lessonDate', dateToDutchDateStr(date))
-                                }
-                                dateFormat="dd-MM-yyyy"
-                                placeholderText="Select a date"
-                                className="date-picker-input"
-                                calendarStartDay={1}
-                                required
-                              />
-                            </div>
+                            <DatePicker
+                              selected={datePickerValue}
+                              onChange={(date) =>
+                                handleEditChange('lessonDate', dateToDutchDateStr(date))
+                              }
+                              dateFormat="dd-MM-yyyy"
+                              className="date-picker-input"
+                              calendarStartDay={1}
+                            />
                           ) : (
                             lesson.lessonDate
                           )}
                         </td>
 
-                        {/* Start time picker */}
+                        {/* Start time */}
                         <td>
                           {isEditing ? (
-                            <div className="form-group compact">
-                              <DatePicker
-                                selected={startPickerValue}
-                                onChange={(time) =>
-                                  handleEditChange('startTime', dateToTimeHHmm(time))
-                                }
-                                showTimeSelect
-                                showTimeSelectOnly
-                                timeIntervals={5}
-                                timeCaption="Start"
-                                dateFormat="HH:mm"
-                                timeFormat="HH:mm"
-                                placeholderText="Select time"
-                                className="date-picker-input"
-                                required
-                              />
-                            </div>
+                            <DatePicker
+                              selected={startPickerValue}
+                              onChange={(time) =>
+                                handleEditChange('startTime', dateToTimeHHmm(time))
+                              }
+                              showTimeSelect
+                              showTimeSelectOnly
+                              timeIntervals={5}
+                              dateFormat="HH:mm"
+                              className="date-picker-input"
+                            />
                           ) : (
                             lesson.startTime
                           )}
                         </td>
 
-                        {/* End time picker */}
+                        {/* End time */}
                         <td>
                           {isEditing ? (
-                            <div className="form-group compact">
-                              <DatePicker
-                                selected={endPickerValue}
-                                onChange={(time) =>
-                                  handleEditChange('endTime', dateToTimeHHmm(time))
-                                }
-                                showTimeSelect
-                                showTimeSelectOnly
-                                timeIntervals={5}
-                                timeCaption="End"
-                                dateFormat="HH:mm"
-                                timeFormat="HH:mm"
-                                placeholderText="Select time"
-                                className="date-picker-input"
-                                required
-                              />
-                            </div>
+                            <DatePicker
+                              selected={endPickerValue}
+                              onChange={(time) =>
+                                handleEditChange('endTime', dateToTimeHHmm(time))
+                              }
+                              showTimeSelect
+                              showTimeSelectOnly
+                              timeIntervals={5}
+                              dateFormat="HH:mm"
+                              className="date-picker-input"
+                            />
                           ) : (
                             lesson.endTime
                           )}
                         </td>
 
-                        {/* Homework */}
+                        {/* New Homework Page button */}
                         <td>
-                          {isEditing ? (
-                            <input
-                              value={editData.homework || ''}
-                              onChange={(e) => handleEditChange('homework', e.target.value)}
-                            />
-                          ) : (
-                            lesson.homework || 'None'
-                          )}
-                        </td>
-
-                        {/* PDFs */}
-                        <td>
-                          {lesson.pdfFileNames?.length > 0
-                            ? lesson.pdfFileNames.map((file, i) => (
-                                <div key={i}>
-                                  <a
-                                    href={`${API_BASE}/api/lesson/file/${file}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    {file}
-                                  </a>
-                                </div>
-                              ))
-                            : 'No files'}
+                          <Link to={`/homework/${lesson.id}`}>
+                            <button>Open</button>
+                          </Link>
                         </td>
 
                         {/* Actions */}
@@ -496,7 +440,7 @@ export default function MyLessons() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan="8" style={{ textAlign: 'center' }}>
+                    <td colSpan="7" style={{ textAlign: 'center' }}>
                       No lessons found.
                     </td>
                   </tr>
@@ -538,8 +482,7 @@ export default function MyLessons() {
                       <th>Date</th>
                       <th>Start</th>
                       <th>End</th>
-                      <th>Homework</th>
-                      <th>PDFs</th>
+                      <th>Homework Page</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -551,27 +494,17 @@ export default function MyLessons() {
                           <td>{lesson.lessonDate}</td>
                           <td>{lesson.startTime}</td>
                           <td>{lesson.endTime}</td>
-                          <td>{lesson.homework || 'None'}</td>
+
                           <td>
-                            {lesson.pdfFileNames?.length > 0
-                              ? lesson.pdfFileNames.map((file, i) => (
-                                  <div key={i}>
-                                    <a
-                                      href={`${API_BASE}/api/lesson/file/${file}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                    >
-                                      {file}
-                                    </a>
-                                  </div>
-                                ))
-                              : 'No files'}
+                            <Link to={`/homework/${lesson.id}`}>
+                              <button>Open</button>
+                            </Link>
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="7">No lessons scheduled.</td>
+                        <td colSpan="6">No lessons scheduled.</td>
                       </tr>
                     )}
                   </tbody>
