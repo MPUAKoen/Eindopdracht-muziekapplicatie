@@ -1,20 +1,30 @@
-### Node.js (frontend)
+##############
+# BACKEND (Java / Maven)
+##############
+
+# Maven build output
+backend/demo/target/
+target/
+
+# Uploads (runtime directory must exist but be empty)
+uploads/*
+!uploads/.gitkeep
+
+##############
+# FRONTEND (global fallback)
+##############
+
+# Node modules (frontend handles itself, but root protects extra)
 node_modules/
-frontend/node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-build/
+
+# Build output (frontend also has its own .gitignore)
 dist/
+build/
 
-### Java / Maven (backend)
-backend/**/target/
-backend/**/.mvn/
-!backend/**/src/main/**/target/
-!backend/**/src/test/**/target/
-backend/**/uploads/
+##############
+# IDEs
+##############
 
-### IDEs
 .idea/
 .vscode/
 *.iml
@@ -24,6 +34,15 @@ backend/**/uploads/
 .project
 .settings/
 
-### System
+##############
+# SYSTEM FILES
+##############
+
 .DS_Store
 Thumbs.db
+
+##############
+# LOGS
+##############
+
+*.log
