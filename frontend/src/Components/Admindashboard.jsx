@@ -16,7 +16,7 @@ const Admindashboard = () => {
     fetch('http://localhost:8080/api/user/all', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
-        // ✅ Filter out the current admin AND all admin accounts
+        // Filter out the current admin AND all admin accounts
         const filtered = Array.isArray(data)
           ? data.filter(
               u =>
@@ -38,7 +38,7 @@ const Admindashboard = () => {
     if (user) fetchUsers();
   }, [user]);
 
-  // 🔹 Toggle user role (teacher <-> student)
+  //  Toggle user role (teacher <-> student)
   const toggleUserRole = (userId) => {
     fetch(`http://localhost:8080/api/user/toggle-role/${userId}`, {
       method: 'PATCH',
@@ -48,7 +48,7 @@ const Admindashboard = () => {
       .catch(err => console.error('Toggle role error:', err));
   };
 
-  // 🔹 Delete user
+  //  Delete user
   const deleteUser = (userId) => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
     fetch(`http://localhost:8080/api/user/delete/${userId}`, {
@@ -61,7 +61,7 @@ const Admindashboard = () => {
 
   if (loading) return <div>Loading...</div>;
 
-  // 🔍 Filter users by name or email
+  //  Filter users by name or email
   const filteredUsers = users.filter(u => {
     if (!search.trim()) return true;
     return (
@@ -70,7 +70,7 @@ const Admindashboard = () => {
     );
   });
 
-  // 🔹 Pagination
+  //  Pagination
   const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const paginatedUsers = filteredUsers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
@@ -82,7 +82,7 @@ const Admindashboard = () => {
           <h1>Admin Dashboard</h1>
         </div>
 
-        {/* 🔍 Search bar */}
+        {/*  Search bar */}
         <div className="search-bar">
           <input
             type="text"
@@ -90,7 +90,7 @@ const Admindashboard = () => {
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
-              setCurrentPage(1); // reset to first page when searching
+              setCurrentPage(1); 
             }}
           />
         </div>

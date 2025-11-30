@@ -110,7 +110,6 @@ const AboutPage = () => {
       .catch(err => console.error('Error deleting piece:', err));
   };
 
-  // inline edit handlers for personal row
   const beginEdit = (field) => {
     setEditingField(field);
     setTempValue(profile[field] ?? '');
@@ -154,7 +153,7 @@ const AboutPage = () => {
       }
     } catch (e) {
       console.error('Update profile failed:', e);
-      alert('Could not update profile.');
+      alert('Username already exists or invalid input.');
     }
   };
 
