@@ -3,10 +3,9 @@ import axios from 'axios';
 import { useUser } from '../Context/UserContext';
 import DatePicker from 'react-datepicker';
 import { format, setHours, setMinutes } from 'date-fns';
+import { API_BASE, getAuthAxiosConfig } from '../lib/auth';
 import 'react-datepicker/dist/react-datepicker.css';
 import '../App.css';
-
-const API_BASE = 'http://localhost:8080';
 
 const Schedule = () => {
   const { user, loading } = useUser();
@@ -31,7 +30,7 @@ const Schedule = () => {
     }
 
     axios
-      .get(`${API_BASE}/api/user/my-students`, { withCredentials: true })
+      .get(`${API_BASE}/api/user/my-students`, getAuthAxiosConfig())
       .then((res) => setStudents(res.data))
       .catch((err) => {
         console.error('Error fetching my students:', err);
@@ -61,10 +60,9 @@ const Schedule = () => {
     pdfFiles.forEach((file) => formData.append('pdfFiles', file));
 
     try {
-      await axios.post(`${API_BASE}/api/lesson/add`, formData, {
-        withCredentials: true,
+      await axios.post(`${API_BASE}/api/lesson/add`, formData, getAuthAxiosConfig({
         headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      }));
       alert('Lesson scheduled successfully!');
       setInstrument('');
       setStudentId('');

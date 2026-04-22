@@ -3,9 +3,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useUser } from '../Context/UserContext';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE, getAuthAxiosConfig } from '../lib/auth';
 import '../App.css';
-
-const API_BASE = 'http://localhost:8080';
 
 const MyStudents = () => {
   const { user, loading } = useUser();
@@ -20,7 +19,7 @@ const MyStudents = () => {
     if (!isTeacher) return;
     setError('');
     axios
-      .get(`${API_BASE}/api/user/my-students`, { withCredentials: true })
+      .get(`${API_BASE}/api/user/my-students`, getAuthAxiosConfig())
       .then((res) => setStudents(Array.isArray(res.data) ? res.data : []))
       .catch((err) => {
         console.error('Error fetching students:', err);
@@ -40,7 +39,7 @@ const MyStudents = () => {
       await axios.patch(
         `${API_BASE}/api/user/unassign-student/${studentId}`,
         {},
-        { withCredentials: true }
+        getAuthAxiosConfig()
       );
       setStudents((prev) => prev.filter((s) => String(s.id) !== String(studentId)));
     } catch (err) {

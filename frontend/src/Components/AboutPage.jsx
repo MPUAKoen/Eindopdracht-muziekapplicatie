@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../Context/UserContext';
+import { API_BASE, authFetch } from '../lib/auth';
 import '../App.css';
 
-const API_BASE = 'http://localhost:8080';
 const UPDATE_PROFILE_URL = `${API_BASE}/api/user/update-profile`;
 
 const sortByDateAdded = (data) => {
@@ -20,7 +20,7 @@ const paginate = (data, currentPage, itemsPerPage) =>
 const totalPages = (data) => Math.ceil(data.length / itemsPerPage);
 
 const AboutPage = () => {
-  const { user, loading } = useUser();
+  const { user, loading, login } = useUser();
 
   // piece lists
   const [favoritePieces, setFavoritePieces] = useState([]);
@@ -74,10 +74,9 @@ const AboutPage = () => {
     if (!title || !composer) return;
     const newPiece = { title, composer, notes };
 
-    fetch('http://localhost:8080/api/piece/add', {
+    authFetch(`${API_BASE}/api/piece/add`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
       body: JSON.stringify({ ...newPiece, category })
     })
       .then((res) => res.text())
@@ -89,10 +88,9 @@ const AboutPage = () => {
   };
 
   const handleDeletePiece = (category, piece, list, setList) => {
-    fetch('http://localhost:8080/api/piece/delete', {
+    authFetch(`${API_BASE}/api/piece/delete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
       body: JSON.stringify({
         title: piece.title,
         composer: piece.composer,
@@ -125,10 +123,9 @@ const AboutPage = () => {
     const payload = { [editingField]: tempValue };
 
     try {
-      const res = await fetch(UPDATE_PROFILE_URL, {
+      const res = await authFetch(UPDATE_PROFILE_URL, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(payload)
       });
 
@@ -136,10 +133,12 @@ const AboutPage = () => {
       if (res.ok) {
         try {
           const updated = await res.json();
+          login(updated);
+          const updatedUser = updated.user ?? updated;
           next = {
-            name: updated.name ?? next.name,
-            email: updated.email ?? next.email,
-            instrument: updated.instrument ?? next.instrument
+            name: updatedUser.name ?? next.name,
+            email: updatedUser.email ?? next.email,
+            instrument: updatedUser.instrument ?? next.instrument
           };
         } catch {
           // no JSON body, keep optimistic next

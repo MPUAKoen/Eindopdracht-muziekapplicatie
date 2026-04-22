@@ -20,6 +20,9 @@ server:
   error:
     include-message: always
     include-binding-errors: always
-    
-    
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:change-me-to-a-long-random-jwt-secret-key}
+    expiration-ms: 86400000
 

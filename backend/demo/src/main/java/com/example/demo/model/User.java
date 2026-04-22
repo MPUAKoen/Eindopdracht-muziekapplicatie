@@ -30,6 +30,7 @@ public class User implements UserDetails {
     private String email;
 
     @Column(nullable = false)
+    @JsonIgnore
     private String password;
 
     @Column(nullable = false)
@@ -95,6 +96,7 @@ public class User implements UserDetails {
     public void setEmail(String email) { this.email = email; }
 
     @Override
+    @JsonIgnore
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
 
@@ -138,29 +140,35 @@ public class User implements UserDetails {
 
     // === Spring Security ===
     @Override
+    @JsonIgnore
     public List<GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + this.role));
     }
 
     @Override
+    @JsonIgnore
     public String getUsername() { return email; }
 
     @Override
+    @JsonIgnore
     public boolean isAccountNonExpired() {
         return true;
     }
 
     @Override
+    @JsonIgnore
     public boolean isAccountNonLocked() {
         return true;
     }
 
     @Override
+    @JsonIgnore
     public boolean isCredentialsNonExpired() {
         return true;
     }
 
     @Override
+    @JsonIgnore
     public boolean isEnabled() {
         return true;
     }

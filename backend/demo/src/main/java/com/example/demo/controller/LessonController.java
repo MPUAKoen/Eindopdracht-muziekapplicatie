@@ -28,7 +28,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/lesson")
-@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
+@CrossOrigin(origins = "http://localhost:5173")
 public class LessonController {
 
     private final LessonRepository lessonRepo;
@@ -150,9 +150,31 @@ public class LessonController {
     }
 
     /** Download lesson PDF */
-    @GetMapping("/file/{filename:.+}")
+    @GetMapping("/{lessonId}/file/{filename:.+}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Resource> serveFile(@PathVariable String filename) {
+    public ResponseEntity<Resource> serveFile(
+            @PathVariable Long lessonId,
+            @PathVariable String filename,
+            Authentication auth
+    ) {
+        Lesson lesson = lessonRepo.findById(lessonId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found"));
+
+        User me = userRepo.findByEmail(auth.getName())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+
+        if (!isAdmin && !lesson.getStudent().getId().equals(me.getId())
+                && !lesson.getTeacher().getId().equals(me.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed");
+        }
+
+        if (lesson.getPdfFileNames() == null || !lesson.getPdfFileNames().contains(filename)) {
+            return ResponseEntity.notFound().build();
+        }
+
         Path file = storage.load(filename);
         Resource resource = new FileSystemResource(file);
         if (!resource.exists()) {

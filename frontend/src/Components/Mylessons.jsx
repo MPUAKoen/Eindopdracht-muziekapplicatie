@@ -3,9 +3,8 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useUser } from '../Context/UserContext';
 import { Link } from "react-router-dom";
+import { API_BASE, authFetch } from '../lib/auth';
 import '../App.css';
-
-const API_BASE = 'http://localhost:8080';
 
 // === Helper functions ===
 const toIsoFromDutch = (ddmmyyyy) => {
@@ -74,7 +73,7 @@ export default function MyLessons() {
     if (loading || !user) return;
     const path = role === 'TEACHER' ? '/api/lesson/teacher' : '/api/lesson/student';
 
-    fetch(`${API_BASE}${path}`, { credentials: 'include' })
+    authFetch(`${API_BASE}${path}`)
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         const normalized = (Array.isArray(data) ? data : []).map((l) => ({
@@ -98,7 +97,7 @@ export default function MyLessons() {
   useEffect(() => {
     if (loading) return;
     if (user && role !== 'TEACHER' && !user.teacher) {
-      fetch(`${API_BASE}/api/user/teachers`, { credentials: 'include' })
+      authFetch(`${API_BASE}/api/user/teachers`)
         .then((res) => (res.status === 204 ? [] : res.json()))
         .then(setTeachers)
         .catch(() => setTeachers([]));
@@ -108,7 +107,7 @@ export default function MyLessons() {
   // === Fetch students ===
   useEffect(() => {
     if (role === 'TEACHER') {
-      fetch(`${API_BASE}/api/user/my-students`, { credentials: 'include' })
+      authFetch(`${API_BASE}/api/user/my-students`)
         .then((res) => (res.ok ? res.json() : []))
         .then(setAssignedStudents)
         .catch(() => setAssignedStudents([]));
@@ -118,9 +117,8 @@ export default function MyLessons() {
   // === Assign teacher ===
   const handleTeacherAssign = () => {
     if (!selectedTeacher) return;
-    fetch(`${API_BASE}/api/user/assign-teacher/${selectedTeacher}`, {
+    authFetch(`${API_BASE}/api/user/assign-teacher/${selectedTeacher}`, {
       method: 'PATCH',
-      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
     })
       .then((res) => res.json())
@@ -157,9 +155,8 @@ export default function MyLessons() {
   const handleDeleteLesson = async (lessonId) => {
     if (!lessonId || !window.confirm('Delete this lesson?')) return;
     try {
-      const res = await fetch(`${API_BASE}/api/lesson/${lessonId}`, {
+      const res = await authFetch(`${API_BASE}/api/lesson/${lessonId}`, {
         method: 'DELETE',
-        credentials: 'include',
       });
       if (!res.ok) throw new Error();
       setMyLessons((prev) => prev.filter((l) => l.id !== lessonId));
@@ -201,9 +198,8 @@ export default function MyLessons() {
     };
 
     try {
-      const res = await fetch(`${API_BASE}/api/lesson/${lessonId}`, {
+      const res = await authFetch(`${API_BASE}/api/lesson/${lessonId}`, {
         method: 'PATCH',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });

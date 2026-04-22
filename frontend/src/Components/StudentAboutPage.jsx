@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { API_BASE, authFetch } from '../lib/auth';
 import '../App.css';
-
-const API_BASE = 'http://localhost:8080';
 
 // Helper functions
 const sortByDateAdded = (data) => {
@@ -31,7 +30,7 @@ const StudentAboutPage = () => {
   const [currentRepertoirePage, setCurrentRepertoirePage] = useState(1);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/user/${id}`, { credentials: 'include' })
+    authFetch(`${API_BASE}/api/user/${id}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then(setStudent)
       .catch((err) => console.error('Error fetching student:', err))

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useUser } from '../Context/UserContext';
+import { API_BASE, authFetch } from '../lib/auth';
 import '../App.css';
 
 const ITEMS_PER_PAGE = 5;
@@ -13,7 +14,7 @@ const Admindashboard = () => {
 
   // 🔹 Fetch all users except the logged-in admin
   const fetchUsers = () => {
-    fetch('http://localhost:8080/api/user/all', { credentials: 'include' })
+    authFetch(`${API_BASE}/api/user/all`)
       .then(res => res.json())
       .then(data => {
         // Filter out the current admin AND all admin accounts
@@ -40,9 +41,8 @@ const Admindashboard = () => {
 
   //  Toggle user role (teacher <-> student)
   const toggleUserRole = (userId) => {
-    fetch(`http://localhost:8080/api/user/toggle-role/${userId}`, {
+    authFetch(`${API_BASE}/api/user/toggle-role/${userId}`, {
       method: 'PATCH',
-      credentials: 'include'
     })
       .then(res => (res.ok ? fetchUsers() : alert('Failed to update user role.')))
       .catch(err => console.error('Toggle role error:', err));
@@ -51,9 +51,8 @@ const Admindashboard = () => {
   //  Delete user
   const deleteUser = (userId) => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
-    fetch(`http://localhost:8080/api/user/delete/${userId}`, {
+    authFetch(`${API_BASE}/api/user/delete/${userId}`, {
       method: 'DELETE',
-      credentials: 'include'
     })
       .then(res => (res.ok ? fetchUsers() : alert('Failed to delete user.')))
       .catch(err => console.error('Delete error:', err));

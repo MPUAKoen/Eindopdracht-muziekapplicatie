@@ -75,7 +75,14 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route path="/student/:id" element={<StudentAboutPage />} />
+      <Route
+        path="/student/:id"
+        element={
+          <ProtectedRoute allowedRoles={["TEACHER", "ADMIN"]}>
+            <StudentAboutPage />
+          </ProtectedRoute>
+        }
+      />
 
 
       {/* Admin only */}

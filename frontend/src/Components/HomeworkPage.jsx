@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-
-const API_BASE = "http://localhost:8080";
+import { API_BASE, authFetch } from "../lib/auth";
 
 export default function HomeworkPage() {
-  const { lessonId } = useParams(); // <-- must match :lessonId in route
+  const { lessonId } = useParams();
   const [lesson, setLesson] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!lessonId) return; // prevent undefined fetch
+    if (!lessonId) {
+      return;
+    }
 
-    fetch(`${API_BASE}/api/lesson/${lessonId}`, { credentials: "include" })
+    authFetch(`${API_BASE}/api/lesson/${lessonId}`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to load lesson");
         return res.json();
@@ -25,6 +26,28 @@ export default function HomeworkPage() {
         setLoading(false);
       });
   }, [lessonId]);
+
+  const handleDownload = async (filename) => {
+    try {
+      const res = await authFetch(`${API_BASE}/api/lesson/${lessonId}/file/${filename}`);
+      if (!res.ok) {
+        throw new Error("Failed to download file");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Homework download error:", err);
+      window.alert("Could not download the file.");
+    }
+  };
 
   if (loading) return <div>Loading...</div>;
   if (!lesson) return <div>No lesson found</div>;
@@ -45,13 +68,9 @@ export default function HomeworkPage() {
                 {lesson.pdfFileNames?.length > 0 ? (
                   lesson.pdfFileNames.map((file, i) => (
                     <div key={i}>
-                      <a
-                        href={`${API_BASE}/api/lesson/file/${file}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
+                      <button type="button" onClick={() => handleDownload(file)}>
                         {file}
-                      </a>
+                      </button>
                     </div>
                   ))
                 ) : (
@@ -68,7 +87,7 @@ export default function HomeworkPage() {
 
         <div style={{ marginTop: "20px" }}>
           <Link to="/mylessons">
-            <button className="submit-btn">⬅ Back to My Lessons</button>
+            <button className="submit-btn">Back to My Lessons</button>
           </Link>
         </div>
       </div>

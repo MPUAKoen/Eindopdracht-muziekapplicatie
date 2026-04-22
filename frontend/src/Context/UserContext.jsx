@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { API_BASE, authFetch, clearToken, getToken, normalizeAuthPayload, setToken } from '../lib/auth';
 
-const API_BASE = 'http://localhost:8080';
 const UserContext = createContext();
+
 export const useUser = () => useContext(UserContext);
 
 export const UserProvider = ({ children }) => {
@@ -10,26 +10,38 @@ export const UserProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios
-      .get(`${API_BASE}/api/user/current`, { withCredentials: true })
-      .then(res => setUser(res.data))
-      .catch(() => setUser(null))
+    const token = getToken();
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    authFetch(`${API_BASE}/api/user/current`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then((currentUser) => setUser(currentUser))
+      .catch(() => {
+        clearToken();
+        setUser(null);
+      })
       .finally(() => setLoading(false));
   }, []);
 
-  const login = (userData) => setUser(userData);
+  const login = (payload) => {
+    const { token, user: nextUser } = normalizeAuthPayload(payload);
+    if (token) {
+      setToken(token);
+    }
+    setUser(nextUser);
+  };
 
   const logout = async () => {
     try {
-      await axios.post(
-        `${API_BASE}/api/user/logout`,
-        {},
-        { withCredentials: true }
-      );
+      await authFetch(`${API_BASE}/api/user/logout`, { method: 'POST' });
     } catch (err) {
-      console.error("Logout error:", err);
+      console.error('Logout error:', err);
     }
 
+    clearToken();
     setUser(null);
   };
 

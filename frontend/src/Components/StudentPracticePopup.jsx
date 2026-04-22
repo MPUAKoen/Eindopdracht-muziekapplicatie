@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { API_BASE, authFetch } from '../lib/auth';
 import '../App.css';
-
-const API_BASE = 'http://localhost:8080';
 
 // base daily goals in minutes
 const PRACTICE_GOAL = 60;
@@ -39,7 +38,7 @@ function StudentPracticePopup({ visible, onClose }) {
     setLoading(true);
     setError('');
 
-    fetch(`${API_BASE}/api/practice/summary`, { credentials: 'include' })
+    authFetch(`${API_BASE}/api/practice/summary`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then((data) => {
         setSummary(data);
@@ -114,10 +113,9 @@ function StudentPracticePopup({ visible, onClose }) {
     setError('');
 
     try {
-      const res = await fetch(`${API_BASE}/api/practice/add`, {
+      const res = await authFetch(`${API_BASE}/api/practice/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           type,
           minutes

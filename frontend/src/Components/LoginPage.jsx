@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { useUser } from '../Context/UserContext';
+import { API_BASE } from '../lib/auth';
 import '../App.css';
 
 const LoginPage = () => {
@@ -25,12 +26,11 @@ const LoginPage = () => {
 
     try {
       const res = await axios.post(
-        'http://localhost:8080/api/user/login',
-        { email, password },
-        { withCredentials: true }
+        `${API_BASE}/api/user/login`,
+        { email, password }
       );
 
-      if (res.status === 200 && res.data?.email) {
+      if (res.status === 200 && res.data?.user?.email) {
         login(res.data);
         setEmail('');
         setPassword('');

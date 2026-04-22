@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../Context/UserContext';
+import { API_BASE, authFetch } from '../lib/auth';
 import '../App.css';
-
-const API_BASE = 'http://localhost:8080';
 
 const sortByDateAdded = (data) => {
   return data.sort((a, b) => {
@@ -42,7 +41,7 @@ const Homepage = () => {
     const role = user.role?.toUpperCase();
     const path = role === 'TEACHER' ? '/api/lesson/teacher' : '/api/lesson/student';
 
-    fetch(`${API_BASE}${path}`, { credentials: 'include' })
+    authFetch(`${API_BASE}${path}`)
       .then(res => (res.ok ? res.json() : []))
       .then(data => {
         const now = new Date();
@@ -65,10 +64,9 @@ const Homepage = () => {
 
     const newPiece = { title, composer, notes };
 
-    fetch(`${API_BASE}/api/piece/add`, {
+    authFetch(`${API_BASE}/api/piece/add`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
       body: JSON.stringify({ ...newPiece, category: 'workingonpieces' })
     })
       .then(res => res.text())
@@ -82,10 +80,9 @@ const Homepage = () => {
   };
 
   const deletePiece = (piece) => {
-    fetch(`${API_BASE}/api/piece/delete`, {
+    authFetch(`${API_BASE}/api/piece/delete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
       body: JSON.stringify({
         title: piece.title,
         composer: piece.composer,

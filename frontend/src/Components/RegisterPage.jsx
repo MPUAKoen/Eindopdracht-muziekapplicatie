@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../Context/UserContext';
 import axios from 'axios';
+import { API_BASE } from '../lib/auth';
 import '../App.css';
 
 const RegisterPage = () => {
@@ -33,16 +34,14 @@ const RegisterPage = () => {
         }
 
         try {
-            const response = await axios.post('http://localhost:8080/api/user/register', {
+            const response = await axios.post(`${API_BASE}/api/user/register`, {
                 name,
                 email,
                 password,
                 instrument
-            }, {
-                withCredentials: true
             });
 
-            if (response.status === 200) {
+            if (response.status === 200 && response.data?.user) {
                 login(response.data);
                 navigate('/');
             }
