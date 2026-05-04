@@ -16,4 +16,6 @@ public interface LessonSimpleView {
     LocalTime getEndTime();
     Long getStudentId();
     String getStudentName();
+    Long getTeacherId();
+    String getTeacherName();
 }

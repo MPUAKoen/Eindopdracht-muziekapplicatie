@@ -30,7 +30,7 @@ const StudentAboutPage = () => {
   const [currentRepertoirePage, setCurrentRepertoirePage] = useState(1);
 
   useEffect(() => {
-    authFetch(`${API_BASE}/api/user/${id}`)
+    authFetch(`${API_BASE}/api/users/${id}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then(setStudent)
       .catch((err) => console.error('Error fetching student:', err))

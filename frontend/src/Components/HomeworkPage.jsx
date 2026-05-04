@@ -12,7 +12,7 @@ export default function HomeworkPage() {
       return;
     }
 
-    authFetch(`${API_BASE}/api/lesson/${lessonId}`)
+    authFetch(`${API_BASE}/api/lessons/${lessonId}`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to load lesson");
         return res.json();
@@ -29,7 +29,7 @@ export default function HomeworkPage() {
 
   const handleDownload = async (filename) => {
     try {
-      const res = await authFetch(`${API_BASE}/api/lesson/${lessonId}/file/${filename}`);
+      const res = await authFetch(`${API_BASE}/api/lessons/${lessonId}/files/${filename}`);
       if (!res.ok) {
         throw new Error("Failed to download file");
       }

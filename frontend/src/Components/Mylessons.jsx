@@ -71,7 +71,7 @@ export default function MyLessons() {
   // === Fetch lessons ===
   useEffect(() => {
     if (loading || !user) return;
-    const path = role === 'TEACHER' ? '/api/lesson/teacher' : '/api/lesson/student';
+    const path = role === 'TEACHER' ? '/api/lessons?scope=teaching' : '/api/lessons?scope=learning';
 
     authFetch(`${API_BASE}${path}`)
       .then((res) => (res.ok ? res.json() : []))
@@ -97,8 +97,8 @@ export default function MyLessons() {
   useEffect(() => {
     if (loading) return;
     if (user && role !== 'TEACHER' && !user.teacher) {
-      authFetch(`${API_BASE}/api/user/teachers`)
-        .then((res) => (res.status === 204 ? [] : res.json()))
+      authFetch(`${API_BASE}/api/teachers`)
+        .then((res) => (res.ok ? res.json() : []))
         .then(setTeachers)
         .catch(() => setTeachers([]));
     }
@@ -107,7 +107,7 @@ export default function MyLessons() {
   // === Fetch students ===
   useEffect(() => {
     if (role === 'TEACHER') {
-      authFetch(`${API_BASE}/api/user/my-students`)
+      authFetch(`${API_BASE}/api/teachers/me/students`)
         .then((res) => (res.ok ? res.json() : []))
         .then(setAssignedStudents)
         .catch(() => setAssignedStudents([]));
@@ -117,9 +117,10 @@ export default function MyLessons() {
   // === Assign teacher ===
   const handleTeacherAssign = () => {
     if (!selectedTeacher) return;
-    authFetch(`${API_BASE}/api/user/assign-teacher/${selectedTeacher}`, {
-      method: 'PATCH',
+    authFetch(`${API_BASE}/api/users/me/teacher`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ teacherId: Number(selectedTeacher) }),
     })
       .then((res) => res.json())
       .then((updatedUser) => {
@@ -155,7 +156,7 @@ export default function MyLessons() {
   const handleDeleteLesson = async (lessonId) => {
     if (!lessonId || !window.confirm('Delete this lesson?')) return;
     try {
-      const res = await authFetch(`${API_BASE}/api/lesson/${lessonId}`, {
+      const res = await authFetch(`${API_BASE}/api/lessons/${lessonId}`, {
         method: 'DELETE',
       });
       if (!res.ok) throw new Error();
@@ -198,7 +199,7 @@ export default function MyLessons() {
     };
 
     try {
-      const res = await authFetch(`${API_BASE}/api/lesson/${lessonId}`, {
+      const res = await authFetch(`${API_BASE}/api/lessons/${lessonId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -212,7 +213,7 @@ export default function MyLessons() {
             ? {
                 ...l,
                 instrument: updated.instrument,
-                lessonDate: updated.lessonDate,
+                lessonDate: toDutchFromIso(updated.lessonDate),
                 startTime: updated.startTime,
                 endTime: updated.endTime,
                 studentId: updated.studentId ?? l.studentId,

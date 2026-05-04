@@ -9,4 +9,8 @@ import java.util.List;
 public interface PracticeEntryRepository extends JpaRepository<PracticeEntry, Long> {
 
     List<PracticeEntry> findByPracticeLog(PracticeLog practiceLog);
+
+    List<PracticeEntry> findByPracticeLogOrderByDateTimeDesc(PracticeLog practiceLog);
+
+    java.util.Optional<PracticeEntry> findByIdAndPracticeLog(Long id, PracticeLog practiceLog);
 }

@@ -3,8 +3,10 @@ import { useUser } from '../Context/UserContext';
 import { API_BASE, authFetch } from '../lib/auth';
 import '../App.css';
 
+const PIECES_URL = `${API_BASE}/api/pieces`;
+
 const sortByDateAdded = (data) => {
-  return data.sort((a, b) => {
+  return [...data].sort((a, b) => {
     if (a.dateAdded && b.dateAdded) {
       return new Date(b.dateAdded) - new Date(a.dateAdded);
     }
@@ -27,11 +29,30 @@ const Homepage = () => {
   const [composer, setComposer] = useState('');
   const [notes, setNotes] = useState('');
 
+  const loadWorkingPieces = async () => {
+    try {
+      const res = await authFetch(`${PIECES_URL}?category=working-on-pieces`);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      setWorkingPieces(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error loading working pieces:', err);
+      setWorkingPieces([]);
+    }
+  };
+
   // Load working on pieces from user
   useEffect(() => {
     if (user) {
-      setWorkingPieces(user.workingOnPieces || []);
+      loadWorkingPieces();
+      return;
     }
+
+    setWorkingPieces([]);
+    setUpcomingLessons([]);
   }, [user]);
 
   // Load only upcoming (future) lessons
@@ -39,7 +60,7 @@ const Homepage = () => {
     if (loading || !user) return;
 
     const role = user.role?.toUpperCase();
-    const path = role === 'TEACHER' ? '/api/lesson/teacher' : '/api/lesson/student';
+    const path = role === 'TEACHER' ? '/api/lessons?scope=teaching' : '/api/lessons?scope=learning';
 
     authFetch(`${API_BASE}${path}`)
       .then(res => (res.ok ? res.json() : []))
@@ -59,48 +80,53 @@ const Homepage = () => {
       .catch(() => setUpcomingLessons([]));
   }, [user, loading]);
 
-  const addPiece = () => {
+  const addPiece = async () => {
     if (!title || !composer) return;
 
     const newPiece = { title, composer, notes };
 
-    authFetch(`${API_BASE}/api/piece/add`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...newPiece, category: 'workingonpieces' })
-    })
-      .then(res => res.text())
-      .then(() => {
-        setWorkingPieces([...workingPieces, newPiece]);
-        setTitle('');
-        setComposer('');
-        setNotes('');
-      })
-      .catch(err => console.error('Error adding piece:', err));
+    try {
+      const res = await authFetch(PIECES_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...newPiece, category: 'working-on-pieces' })
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || `HTTP ${res.status}`);
+      }
+
+      setTitle('');
+      setComposer('');
+      setNotes('');
+      await loadWorkingPieces();
+    } catch (err) {
+      console.error('Error adding piece:', err);
+    }
   };
 
-  const deletePiece = (piece) => {
-    authFetch(`${API_BASE}/api/piece/delete`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: piece.title,
-        composer: piece.composer,
-        notes: piece.notes,
-        category: 'workingonpieces'
-      })
-    })
-      .then(res => res.text())
-      .then(() => {
-        const updated = workingPieces.filter(
-          p =>
-            p.title !== piece.title ||
-            p.composer !== piece.composer ||
-            p.notes !== piece.notes
-        );
-        setWorkingPieces(updated);
-      })
-      .catch(err => console.error('Error deleting piece:', err));
+  const deletePiece = async (piece) => {
+    if (!piece?.id) {
+      console.error('Error deleting piece: missing piece id', piece);
+      await loadWorkingPieces();
+      return;
+    }
+
+    try {
+      const res = await authFetch(`${PIECES_URL}/${piece.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || `HTTP ${res.status}`);
+      }
+
+      await loadWorkingPieces();
+    } catch (err) {
+      console.error('Error deleting piece:', err);
+    }
   };
 
   if (loading) return <div>Loading user...</div>;
@@ -175,7 +201,7 @@ const Homepage = () => {
               </thead>
               <tbody>
                 {paginate(sortByDateAdded(workingPieces), currentPage, itemsPerPage).map((piece, index) => (
-                  <tr key={index}>
+                  <tr key={piece.id ?? index}>
                     <td>{piece.title}</td>
                     <td>{piece.composer}</td>
                     <td>{piece.notes}</td>

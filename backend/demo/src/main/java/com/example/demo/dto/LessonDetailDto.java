@@ -8,7 +8,9 @@ import java.util.List;
 public class LessonDetailDto {
     private Long id;
     private String instrument;
+    private Long teacherId;
     private String teacherName;
+    private Long studentId;
     private String studentName;
     private LocalDate lessonDate;
     private LocalTime startTime;
@@ -17,12 +19,14 @@ public class LessonDetailDto {
     private List<String> pdfFileNames;
 
     // Constructor
-    public LessonDetailDto(Long id, String instrument, String teacherName, String studentName,
+    public LessonDetailDto(Long id, String instrument, Long teacherId, String teacherName, Long studentId, String studentName,
                            LocalDate lessonDate, LocalTime startTime, LocalTime endTime,
                            String homework, List<String> pdfFileNames) {
         this.id = id;
         this.instrument = instrument;
+        this.teacherId = teacherId;
         this.teacherName = teacherName;
+        this.studentId = studentId;
         this.studentName = studentName;
         this.lessonDate = lessonDate;
         this.startTime = startTime;
@@ -51,12 +55,28 @@ public class LessonDetailDto {
         this.instrument = instrument;
     }
 
+    public Long getTeacherId() {
+        return teacherId;
+    }
+
+    public void setTeacherId(Long teacherId) {
+        this.teacherId = teacherId;
+    }
+
     public String getTeacherName() {
         return teacherName;
     }
 
     public void setTeacherName(String teacherName) {
         this.teacherName = teacherName;
+    }
+
+    public Long getStudentId() {
+        return studentId;
+    }
+
+    public void setStudentId(Long studentId) {
+        this.studentId = studentId;
     }
 
     public String getStudentName() {

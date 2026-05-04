@@ -30,7 +30,7 @@ const Schedule = () => {
     }
 
     axios
-      .get(`${API_BASE}/api/user/my-students`, getAuthAxiosConfig())
+      .get(`${API_BASE}/api/teachers/me/students`, getAuthAxiosConfig())
       .then((res) => setStudents(res.data))
       .catch((err) => {
         console.error('Error fetching my students:', err);
@@ -60,7 +60,7 @@ const Schedule = () => {
     pdfFiles.forEach((file) => formData.append('pdfFiles', file));
 
     try {
-      await axios.post(`${API_BASE}/api/lesson/add`, formData, getAuthAxiosConfig({
+      await axios.post(`${API_BASE}/api/lessons`, formData, getAuthAxiosConfig({
         headers: { 'Content-Type': 'multipart/form-data' },
       }));
       alert('Lesson scheduled successfully!');

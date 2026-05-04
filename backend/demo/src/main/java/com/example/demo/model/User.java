@@ -39,17 +39,41 @@ public class User implements UserDetails {
     @Column(nullable = true)
     private String instrument;
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    private List<Piece> workingOnPieces;
+    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinTable(
+            name = "user_working_piece_links",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "piece_id")
+    )
+    @OrderColumn(name = "piece_order")
+    private List<Piece> workingOnPieces = new ArrayList<>();
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    private List<Piece> repertoire;
+    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinTable(
+            name = "user_repertoire_piece_links",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "piece_id")
+    )
+    @OrderColumn(name = "piece_order")
+    private List<Piece> repertoire = new ArrayList<>();
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    private List<Piece> wishlist;
+    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinTable(
+            name = "user_wishlist_piece_links",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "piece_id")
+    )
+    @OrderColumn(name = "piece_order")
+    private List<Piece> wishlist = new ArrayList<>();
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    private List<Piece> favoritePieces;
+    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinTable(
+            name = "user_favorite_piece_links",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "piece_id")
+    )
+    @OrderColumn(name = "piece_order")
+    private List<Piece> favoritePieces = new ArrayList<>();
 
     // === Relationship to a teacher (many users -> one teacher)
     @ManyToOne(fetch = FetchType.LAZY)
@@ -106,16 +130,28 @@ public class User implements UserDetails {
     public String getInstrument() { return instrument; }
     public void setInstrument(String instrument) { this.instrument = instrument; }
 
-    public List<Piece> getWorkingOnPieces() { return workingOnPieces; }
+    public List<Piece> getWorkingOnPieces() {
+        workingOnPieces = ensureList(workingOnPieces);
+        return workingOnPieces;
+    }
     public void setWorkingOnPieces(List<Piece> workingOnPieces) { this.workingOnPieces = workingOnPieces; }
 
-    public List<Piece> getRepertoire() { return repertoire; }
+    public List<Piece> getRepertoire() {
+        repertoire = ensureList(repertoire);
+        return repertoire;
+    }
     public void setRepertoire(List<Piece> repertoire) { this.repertoire = repertoire; }
 
-    public List<Piece> getWishlist() { return wishlist; }
+    public List<Piece> getWishlist() {
+        wishlist = ensureList(wishlist);
+        return wishlist;
+    }
     public void setWishlist(List<Piece> wishlist) { this.wishlist = wishlist; }
 
-    public List<Piece> getFavoritePieces() { return favoritePieces; }
+    public List<Piece> getFavoritePieces() {
+        favoritePieces = ensureList(favoritePieces);
+        return favoritePieces;
+    }
     public void setFavoritePieces(List<Piece> favoritePieces) { this.favoritePieces = favoritePieces; }
 
     public User getTeacher() { return teacher; }
@@ -126,6 +162,31 @@ public class User implements UserDetails {
 
     public PracticeLog getPracticeLog() { return practiceLog; }
     public void setPracticeLog(PracticeLog practiceLog) { this.practiceLog = practiceLog; }
+
+    public boolean normalizePieceCollections() {
+        boolean changed = false;
+        if (workingOnPieces == null) {
+            workingOnPieces = new ArrayList<>();
+            changed = true;
+        }
+        if (repertoire == null) {
+            repertoire = new ArrayList<>();
+            changed = true;
+        }
+        if (wishlist == null) {
+            wishlist = new ArrayList<>();
+            changed = true;
+        }
+        if (favoritePieces == null) {
+            favoritePieces = new ArrayList<>();
+            changed = true;
+        }
+        changed |= normalizePieceCollectionField(workingOnPieces);
+        changed |= normalizePieceCollectionField(repertoire);
+        changed |= normalizePieceCollectionField(wishlist);
+        changed |= normalizePieceCollectionField(favoritePieces);
+        return changed;
+    }
 
     // === Utility helpers ===
     public void addUser(User user) {
@@ -171,5 +232,16 @@ public class User implements UserDetails {
     @JsonIgnore
     public boolean isEnabled() {
         return true;
+    }
+
+    private List<Piece> ensureList(List<Piece> pieces) {
+        return pieces != null ? pieces : new ArrayList<>();
+    }
+
+    private boolean normalizePieceCollectionField(List<Piece> pieces) {
+        if (pieces == null) {
+            return false;
+        }
+        return pieces.removeIf(piece -> piece == null);
     }
 }

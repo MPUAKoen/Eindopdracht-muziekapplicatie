@@ -14,7 +14,7 @@ const Admindashboard = () => {
 
   // 🔹 Fetch all users except the logged-in admin
   const fetchUsers = () => {
-    authFetch(`${API_BASE}/api/user/all`)
+    authFetch(`${API_BASE}/api/users`)
       .then(res => res.json())
       .then(data => {
         // Filter out the current admin AND all admin accounts
@@ -41,8 +41,13 @@ const Admindashboard = () => {
 
   //  Toggle user role (teacher <-> student)
   const toggleUserRole = (userId) => {
-    authFetch(`${API_BASE}/api/user/toggle-role/${userId}`, {
+    const selectedUser = users.find((u) => String(u.id) === String(userId));
+    const nextRole = selectedUser?.role === 'TEACHER' ? 'USER' : 'TEACHER';
+
+    authFetch(`${API_BASE}/api/users/${userId}`, {
       method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: nextRole }),
     })
       .then(res => (res.ok ? fetchUsers() : alert('Failed to update user role.')))
       .catch(err => console.error('Toggle role error:', err));
@@ -51,7 +56,7 @@ const Admindashboard = () => {
   //  Delete user
   const deleteUser = (userId) => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
-    authFetch(`${API_BASE}/api/user/delete/${userId}`, {
+    authFetch(`${API_BASE}/api/users/${userId}`, {
       method: 'DELETE',
     })
       .then(res => (res.ok ? fetchUsers() : alert('Failed to delete user.')))

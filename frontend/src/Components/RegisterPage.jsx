@@ -34,14 +34,14 @@ const RegisterPage = () => {
         }
 
         try {
-            const response = await axios.post(`${API_BASE}/api/user/register`, {
+            const response = await axios.post(`${API_BASE}/api/auth/register`, {
                 name,
                 email,
                 password,
                 instrument
             });
 
-            if (response.status === 200 && response.data?.user) {
+            if ((response.status === 200 || response.status === 201) && response.data?.user) {
                 login(response.data);
                 navigate('/');
             }

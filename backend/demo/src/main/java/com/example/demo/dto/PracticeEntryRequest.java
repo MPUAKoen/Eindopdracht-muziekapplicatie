@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 public class PracticeEntryRequest {
 
     private PracticeType type;
-    private int minutes;
+    private Integer minutes;
     private LocalDateTime dateTime;
 
     public PracticeType getType() {
@@ -18,11 +18,11 @@ public class PracticeEntryRequest {
         this.type = type;
     }
 
-    public int getMinutes() {
+    public Integer getMinutes() {
         return minutes;
     }
 
-    public void setMinutes(int minutes) {
+    public void setMinutes(Integer minutes) {
         this.minutes = minutes;
     }
 

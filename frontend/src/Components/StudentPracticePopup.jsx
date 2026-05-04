@@ -38,7 +38,7 @@ function StudentPracticePopup({ visible, onClose }) {
     setLoading(true);
     setError('');
 
-    authFetch(`${API_BASE}/api/practice/summary`)
+    authFetch(`${API_BASE}/api/practice-entries/summary`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then((data) => {
         setSummary(data);
@@ -113,7 +113,7 @@ function StudentPracticePopup({ visible, onClose }) {
     setError('');
 
     try {
-      const res = await authFetch(`${API_BASE}/api/practice/add`, {
+      const res = await authFetch(`${API_BASE}/api/practice-entries`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

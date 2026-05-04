@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../Context/UserContext';
-import { API_BASE, authFetch } from '../lib/auth';
+import { API_BASE, authFetch, getToken } from '../lib/auth';
 import '../App.css';
 
-const UPDATE_PROFILE_URL = `${API_BASE}/api/user/update-profile`;
+const UPDATE_PROFILE_URL = `${API_BASE}/api/users/me`;
+const PIECES_URL = `${API_BASE}/api/pieces`;
 
 const sortByDateAdded = (data) => {
   return [...data].sort((a, b) => {
@@ -56,56 +57,103 @@ const AboutPage = () => {
   const [editingField, setEditingField] = useState(null); // 'name' | 'email' | 'instrument' | null
   const [tempValue, setTempValue] = useState('');
 
+  const loadPieces = async (category, setList) => {
+    try {
+      const res = await authFetch(`${PIECES_URL}?category=${encodeURIComponent(category)}`);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      setList(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error(`Error loading ${category} pieces:`, err);
+      setList([]);
+    }
+  };
+
   useEffect(() => {
     if (user) {
-      setFavoritePieces(user.favoritePieces || []);
-      setWishlist(user.wishlist || []);
-      setLearningPieces(user.workingOnPieces || []);
-      setRepertoire(user.repertoire || []);
       setProfile({
         name: user.name || '',
         email: user.email || '',
         instrument: user.instrument || '',
       });
+
+      loadPieces('favorite', setFavoritePieces);
+      loadPieces('wishlist', setWishlist);
+      loadPieces('working-on-pieces', setLearningPieces);
+      loadPieces('repertoire', setRepertoire);
+      return;
     }
+
+    setProfile({ name: '', email: '', instrument: '' });
+    setFavoritePieces([]);
+    setWishlist([]);
+    setLearningPieces([]);
+    setRepertoire([]);
   }, [user]);
 
-  const addPiece = (category, setList, list, title, composer, notes, resetFields) => {
+  const addPiece = async (category, setList, title, composer, notes, resetFields) => {
     if (!title || !composer) return;
     const newPiece = { title, composer, notes };
 
-    authFetch(`${API_BASE}/api/piece/add`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...newPiece, category })
-    })
-      .then((res) => res.text())
-      .then(() => {
-        setList([...list, newPiece]);
-        resetFields();
-      })
-      .catch(err => console.error('Error adding piece:', err));
+    try {
+      const res = await authFetch(PIECES_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...newPiece, category })
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || `HTTP ${res.status}`);
+      }
+
+      resetFields();
+      await loadPieces(category, setList);
+    } catch (err) {
+      console.error('Error adding piece:', err);
+    }
   };
 
-  const handleDeletePiece = (category, piece, list, setList) => {
-    authFetch(`${API_BASE}/api/piece/delete`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: piece.title,
-        composer: piece.composer,
-        notes: piece.notes,
-        category
-      })
-    })
-      .then((res) => res.text())
-      .then(() => {
-        const updated = list.filter(
-          (p) => p.title !== piece.title || p.composer !== piece.composer || p.notes !== piece.notes
-        );
-        setList(updated);
-      })
-      .catch(err => console.error('Error deleting piece:', err));
+  const handleDeletePiece = async (category, piece, setList) => {
+    if (!piece?.id) {
+      console.error('Error deleting piece: missing piece id', piece);
+      await loadPieces(category, setList);
+      return;
+    }
+
+    try {
+      const res = await authFetch(`${PIECES_URL}/${piece.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        if (res.status === 401) {
+          const meRes = await authFetch(UPDATE_PROFILE_URL);
+          const meText = await meRes.text();
+          const token = getToken();
+
+          console.error('Delete diagnostics', {
+            pieceId: piece.id,
+            category,
+            tokenPresent: Boolean(token),
+            tokenPreview: token ? `${token.slice(0, 16)}...` : null,
+            deleteStatus: res.status,
+            deleteBody: errorText || null,
+            currentUserStatus: meRes.status,
+            currentUserBody: meText || null,
+          });
+        }
+        throw new Error(errorText || `HTTP ${res.status}`);
+      }
+
+      await loadPieces(category, setList);
+    } catch (err) {
+      console.error('Error deleting piece:', err);
+    }
   };
 
   const beginEdit = (field) => {
@@ -173,12 +221,12 @@ const AboutPage = () => {
         </thead>
         <tbody>
           {paginate(sortByDateAdded(list), currentPage, itemsPerPage).map((piece, idx) => (
-            <tr key={idx}>
+            <tr key={piece.id ?? idx}>
               <td>{piece.title}</td>
               <td>{piece.composer}</td>
               <td>{piece.notes}</td>
               <td>
-                <button onClick={() => handleDeletePiece(category, piece, list, setList)}>
+                <button onClick={() => handleDeletePiece(category, piece, setList)}>
                   Delete
                 </button>
               </td>
@@ -191,7 +239,7 @@ const AboutPage = () => {
               <input
                 type="text"
                 placeholder="Title"
-                value={favoriteTitle}
+                value={inputTitle}
                 onChange={(e) => setInputTitle(e.target.value)}
               />
             </td>
@@ -199,7 +247,7 @@ const AboutPage = () => {
               <input
                 type="text"
                 placeholder="Composer"
-                value={favoriteComposer}
+                value={inputComposer}
                 onChange={(e) => setInputComposer(e.target.value)}
               />
             </td>
@@ -207,7 +255,7 @@ const AboutPage = () => {
               <input
                 type="text"
                 placeholder="Notes"
-                value={favoriteNotes}
+                value={inputNotes}
                 onChange={(e) => setInputNotes(e.target.value)}
               />
             </td>
@@ -217,7 +265,6 @@ const AboutPage = () => {
                   addPiece(
                     category,
                     setList,
-                    list,
                     inputTitle,
                     inputComposer,
                     inputNotes,
@@ -390,7 +437,7 @@ const AboutPage = () => {
             currentLearningPage,
             setCurrentLearningPage,
             setLearningPieces,
-            'workingonpieces',
+            'working-on-pieces',
             learningTitle,
             setLearningTitle,
             learningComposer,

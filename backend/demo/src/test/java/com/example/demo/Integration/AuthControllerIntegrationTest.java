@@ -37,17 +37,17 @@ class AuthControllerIntegrationTest {
                 "instrument", "Piano"
         );
 
-        mockMvc.perform(post("/api/user/register")
+        mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(registerPayload)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.token").exists())
                 .andExpect(jsonPath("$.user.email").exists());
     }
 
     @Test
     void loginUser_WrongPassword_ShouldReturnUnauthorized() throws Exception {
-        mockMvc.perform(post("/api/user/login")
+        mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                             {
@@ -55,13 +55,12 @@ class AuthControllerIntegrationTest {
                               "password": "wrongpass"
                             }
                             """))
-                .andExpect(status().isUnauthorized())
-                .andExpect(content().string("Invalid credentials"));
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
     void getAllUsers_AsRegularUser_ShouldReturnForbidden() throws Exception {
-        mockMvc.perform(get("/api/user/all")
+        mockMvc.perform(get("/api/users")
                         .with(user("student@mail.com").roles("USER")))
                 .andExpect(status().isForbidden());
     }

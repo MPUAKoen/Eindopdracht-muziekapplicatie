@@ -3,35 +3,45 @@ package com.example.demo.config;
 import com.example.demo.model.Piece;
 import com.example.demo.model.User;
 import com.example.demo.repository.UserRepository;
+import jakarta.persistence.EntityManager;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 @Configuration
+@ConditionalOnProperty(name = "app.seed.enabled", havingValue = "true", matchIfMissing = true)
 public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EntityManager entityManager;
 
-    public DataInitializer(UserRepository userRepository,
-                           PasswordEncoder passwordEncoder) {
+    public DataInitializer(UserRepository userRepository, PasswordEncoder passwordEncoder, EntityManager entityManager) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.entityManager = entityManager;
     }
 
     @Override
     @Transactional
-    public void run(String... args) throws Exception {
-        if (userRepository.count() > 0) return;
+    public void run(String... args) {
+        repairPieceOrderColumns();
+
+        if (userRepository.count() > 0) {
+            return;
+        }
 
         String defaultPassword = passwordEncoder.encode("Test123");
-        System.out.println("🌱 Seeding realistic demo data...");
+        System.out.println("Seeding realistic demo data...");
 
-        // 🎵 Instrument-specific example pieces
         Map<String, String[][]> instrumentPieces = Map.of(
                 "Piano", new String[][]{
                         {"Moonlight Sonata", "Beethoven"},
@@ -105,7 +115,6 @@ public class DataInitializer implements CommandLineRunner {
                         {"Impromptu-Caprice", "Pierné"},
                         {"The Minstrel’s Adieu to His Native Land", "Thomas"}
                 },
-                
                 "Flute", new String[][]{
                         {"Sicilienne", "Fauré"},
                         {"Badinerie", "Bach"},
@@ -144,21 +153,21 @@ public class DataInitializer implements CommandLineRunner {
                 }
         );
 
-        // Helper: 10 pieces per instrument
-        Function<String, List<Piece>> generatePiecesForInstrument = (instrument) -> {
+        Function<String, List<Piece>> generatePiecesForInstrument = instrument -> {
             List<Piece> pieces = new ArrayList<>();
             String[][] source = instrumentPieces.getOrDefault(instrument, instrumentPieces.get("Piano"));
-            for (String[] s : source) {
-                Piece p = new Piece();
-                p.setTitle(s[0]);
-                p.setComposer(s[1]);
-                p.setNotes("Study notes for " + s[0]);
-                pieces.add(p);
+
+            for (String[] entry : source) {
+                Piece piece = new Piece();
+                piece.setTitle(entry[0]);
+                piece.setComposer(entry[1]);
+                piece.setNotes("Study notes for " + entry[0]);
+                pieces.add(piece);
             }
+
             return pieces;
         };
 
-        // 1️⃣ Admins
         for (int i = 1; i <= 2; i++) {
             User admin = new User();
             admin.setName("Admin " + i);
@@ -173,9 +182,8 @@ public class DataInitializer implements CommandLineRunner {
             userRepository.save(admin);
         }
 
-        // 2️⃣ Teachers
         String[] teacherInstruments = {"Piano", "Opera", "Violin", "Guitar", "Drums", "Harp", "Flute", "Cello", "Clarinet", "Voice"};
-        List<User> teachers = new ArrayList<>();
+        Map<String, User> teachersByInstrument = new HashMap<>();
         for (String instrument : teacherInstruments) {
             User teacher = new User();
             teacher.setName("Teacher " + instrument);
@@ -188,10 +196,9 @@ public class DataInitializer implements CommandLineRunner {
             teacher.setWorkingOnPieces(generatePiecesForInstrument.apply(instrument));
             teacher.setRepertoire(generatePiecesForInstrument.apply(instrument));
             userRepository.save(teacher);
-            teachers.add(teacher);
+            teachersByInstrument.put(instrument.toLowerCase(), teacher);
         }
 
-        // 3️⃣ Students (30)
         String[] studentInstruments = {"Piano", "Opera", "Violin", "Guitar", "Drums", "Harp"};
         for (String instrument : studentInstruments) {
             for (int i = 1; i <= 5; i++) {
@@ -206,21 +213,53 @@ public class DataInitializer implements CommandLineRunner {
                 student.setWorkingOnPieces(generatePiecesForInstrument.apply(instrument));
                 student.setRepertoire(generatePiecesForInstrument.apply(instrument));
 
-                // Assign to teacher with same instrument
-                teachers.stream()
-                        .filter(t -> t.getInstrument().equalsIgnoreCase(instrument))
-                        .findFirst()
-                        .ifPresent(student::setTeacher);
+                User teacher = teachersByInstrument.get(instrument.toLowerCase());
+                if (teacher != null) {
+                    student.setTeacher(teacher);
+                }
 
                 userRepository.save(student);
             }
         }
 
-        System.out.println("✅ Database seeded successfully with:");
-        System.out.println("   • 2 Admins");
-        System.out.println("   • 10 Teachers");
-        System.out.println("   • 30 Students (no Voice students, replaced by Harp)");
-        System.out.println("   • 10 instrument-specific pieces per category each");
-        System.out.println("   • Students linked to matching teachers");
+        System.out.println("Database seeded successfully with:");
+        System.out.println("  - 2 Admins");
+        System.out.println("  - 10 Teachers");
+        System.out.println("  - 30 Students (no Voice students, replaced by Harp)");
+        System.out.println("  - 10 instrument-specific pieces per category each");
+        System.out.println("  - Students linked to matching teachers");
+    }
+
+    private void repairPieceOrderColumns() {
+        for (String tableName : List.of(
+                "user_favorite_piece_links",
+                "user_wishlist_piece_links",
+                "user_working_piece_links",
+                "user_repertoire_piece_links"
+        )) {
+            compactPieceOrder(tableName);
+        }
+    }
+
+    private void compactPieceOrder(String tableName) {
+        entityManager.createNativeQuery("""
+                update %s
+                set piece_order = -piece_order - 1
+                """.formatted(tableName))
+                .executeUpdate();
+
+        entityManager.createNativeQuery("""
+                update %s links
+                set piece_order = ranked.new_order
+                from (
+                    select user_id,
+                           piece_id,
+                           row_number() over (partition by user_id order by piece_order desc) - 1 as new_order
+                    from %s
+                ) ranked
+                where links.user_id = ranked.user_id
+                  and links.piece_id = ranked.piece_id
+                """.formatted(tableName, tableName))
+                .executeUpdate();
     }
 }

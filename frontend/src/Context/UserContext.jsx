@@ -16,7 +16,7 @@ export const UserProvider = ({ children }) => {
       return;
     }
 
-    authFetch(`${API_BASE}/api/user/current`)
+    authFetch(`${API_BASE}/api/users/me`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then((currentUser) => setUser(currentUser))
       .catch(() => {
@@ -36,7 +36,7 @@ export const UserProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await authFetch(`${API_BASE}/api/user/logout`, { method: 'POST' });
+      await authFetch(`${API_BASE}/api/auth/logout`, { method: 'POST' });
     } catch (err) {
       console.error('Logout error:', err);
     }

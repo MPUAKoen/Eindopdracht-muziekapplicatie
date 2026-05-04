@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.model.Piece;
 import com.example.demo.model.User;
+import com.example.demo.repository.LessonRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.security.JwtService;
 import org.slf4j.Logger;
@@ -17,16 +18,16 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/user")
 public class AuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
@@ -34,33 +35,57 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final LessonRepository lessonRepository;
 
-    public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthController(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService,
+            LessonRepository lessonRepository
+    ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.lessonRepository = lessonRepository;
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody RegisterRequest request) {
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("Email is already in use");
+    @PostMapping("/api/auth/register")
+    public ResponseEntity<AuthResponse> registerUser(@RequestBody RegisterRequest request) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Registration payload is required");
+        }
+        if (request.getEmail() == null || request.getEmail().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required");
+        }
+        if (request.getPassword() == null || request.getPassword().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password is required");
+        }
+        if (request.getName() == null || request.getName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name is required");
+        }
+
+        if (userRepository.findByEmail(request.getEmail().trim()).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use");
         }
 
         User newUser = new User();
-        newUser.setName(request.getName());
-        newUser.setEmail(request.getEmail());
+        newUser.setName(request.getName().trim());
+        newUser.setEmail(request.getEmail().trim());
         newUser.setPassword(passwordEncoder.encode(request.getPassword()));
-        newUser.setInstrument(request.getInstrument());
+        newUser.setInstrument(trimToNull(request.getInstrument()));
         userRepository.save(newUser);
 
         logger.info("Registered new user: {}", newUser.getEmail());
-        return ResponseEntity.ok(buildAuthResponse(newUser));
+        return ResponseEntity.status(HttpStatus.CREATED).body(buildAuthResponse(newUser));
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody LoginRequest request) {
-        Optional<User> optionalUser = userRepository.findByEmail(request.getEmail());
+    @PostMapping("/api/auth/login")
+    public ResponseEntity<AuthResponse> loginUser(@RequestBody LoginRequest request) {
+        if (request == null || request.getEmail() == null || request.getPassword() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email and password are required");
+        }
+
+        Optional<User> optionalUser = userRepository.findByEmail(request.getEmail().trim());
         if (optionalUser.isPresent()) {
             User user = optionalUser.get();
             if (passwordEncoder.matches(request.getPassword(), user.getPassword())) {
@@ -69,15 +94,46 @@ public class AuthController {
             }
         }
 
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
     }
 
-    @GetMapping("/current")
-    public ResponseEntity<?> getCurrentUser(Authentication authentication) {
+    @PostMapping("/api/auth/logout")
+    public ResponseEntity<Void> logout() {
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/api/users/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<CurrentUserResponse> getCurrentUser(Authentication authentication) {
         return ResponseEntity.ok(buildUserResponse(requireCurrentUser(authentication)));
     }
 
-    @GetMapping("/all")
+    @PatchMapping("/api/users/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<AuthResponse> updateProfile(
+            @RequestBody UpdateProfileRequest request,
+            Authentication authentication
+    ) {
+        User user = requireCurrentUser(authentication);
+        applyUserFields(user, request);
+        userRepository.save(user);
+        return ResponseEntity.ok(buildAuthResponse(user));
+    }
+
+    @PutMapping("/api/users/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<AuthResponse> replaceProfile(
+            @RequestBody UpdateProfileRequest request,
+            Authentication authentication
+    ) {
+        User user = requireCurrentUser(authentication);
+        requireUserProfilePayload(request);
+        applyUserFields(user, request);
+        userRepository.save(user);
+        return ResponseEntity.ok(buildAuthResponse(user));
+    }
+
+    @GetMapping("/api/users")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<UserSummaryResponse>> getAllUsers() {
         List<UserSummaryResponse> users = userRepository.findAll().stream()
@@ -86,9 +142,9 @@ public class AuthController {
         return ResponseEntity.ok(users);
     }
 
-    @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('TEACHER','ADMIN')")
-    public ResponseEntity<?> getUserById(@PathVariable Long id, Authentication authentication) {
+    @GetMapping("/api/users/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<CurrentUserResponse> getUserById(@PathVariable Long id, Authentication authentication) {
         User currentUser = requireCurrentUser(authentication);
         User requestedUser = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
@@ -101,75 +157,95 @@ public class AuthController {
                 && currentUser.getId().equals(requestedUser.getTeacher().getId());
 
         if (!isAdmin && !isSelf && !isAssignedStudent) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only view your own students");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only view yourself or your own students");
         }
 
         return ResponseEntity.ok(buildUserResponse(requestedUser));
     }
 
-    @GetMapping("/teachers")
+    @PatchMapping("/api/users/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserSummaryResponse> updateUser(
+            @PathVariable Long userId,
+            @RequestBody AdminUserUpdateRequest request
+    ) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User payload is required");
+        }
+
+        applyUserFields(user, request);
+
+        if (request.getRole() != null && !request.getRole().isBlank()) {
+            updateRole(user, request.getRole());
+        }
+
+        userRepository.save(user);
+        return ResponseEntity.ok(buildUserSummaryResponse(user));
+    }
+
+    @PutMapping("/api/users/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserSummaryResponse> replaceUser(
+            @PathVariable Long userId,
+            @RequestBody AdminUserUpdateRequest request
+    ) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        requireAdminUserPayload(request);
+        applyUserFields(user, request);
+        updateRole(user, request.getRole());
+
+        userRepository.save(user);
+        return ResponseEntity.ok(buildUserSummaryResponse(user));
+    }
+
+    @DeleteMapping("/api/users/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (hasRole(user, "TEACHER")) {
+            userRepository.findAll().stream()
+                    .filter(student -> student.getTeacher() != null && userId.equals(student.getTeacher().getId()))
+                    .forEach(student -> {
+                        student.setTeacher(null);
+                        userRepository.save(student);
+                    });
+        }
+
+        lessonRepository.deleteAll(lessonRepository.findByTeacher(user));
+        lessonRepository.deleteAll(lessonRepository.findByStudent(user));
+        userRepository.delete(user);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/api/teachers")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<UserSummaryResponse>> getTeachers() {
         List<UserSummaryResponse> teachers = userRepository.findByRole("TEACHER").stream()
                 .map(this::buildUserSummaryResponse)
                 .toList();
-
-        if (teachers.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
-
-        return ResponseEntity.ok()
-                .header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate")
-                .header("Pragma", "no-cache")
-                .header("Expires", "0")
-                .body(teachers);
+        return ResponseEntity.ok(teachers);
     }
 
-    @PatchMapping("/toggle-role/{userId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> toggleUserRole(@PathVariable Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-
-        if ("TEACHER".equalsIgnoreCase(user.getRole())) {
-            logger.info("Demoting teacher {}", user.getEmail());
-
-            userRepository.findAll().forEach(student -> {
-                if (student.getTeacher() != null && student.getTeacher().getId().equals(user.getId())) {
-                    student.setTeacher(null);
-                    userRepository.save(student);
-                }
-            });
-
-            user.setRole("USER");
-            userRepository.save(user);
-            return ResponseEntity.ok("Teacher demoted to USER");
-        }
-
-        if ("USER".equalsIgnoreCase(user.getRole())) {
-            logger.info("Promoting user {}", user.getEmail());
-
-            if (user.getTeacher() != null) {
-                User oldTeacher = user.getTeacher();
-                oldTeacher.getUsers().remove(user);
-                user.setTeacher(null);
-                userRepository.save(oldTeacher);
-            }
-
-            user.setRole("TEACHER");
-            userRepository.save(user);
-            return ResponseEntity.ok("User promoted to TEACHER");
-        }
-
-        return ResponseEntity.badRequest().body("Invalid role transition");
-    }
-
-    @PatchMapping("/assign-teacher/{teacherId}")
+    @PutMapping("/api/users/me/teacher")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<?> assignTeacher(@PathVariable Long teacherId, Authentication authentication) {
+    public ResponseEntity<CurrentUserResponse> assignTeacher(
+            @RequestBody TeacherAssignmentRequest request,
+            Authentication authentication
+    ) {
+        if (request == null || request.getTeacherId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "teacherId is required");
+        }
+
         User student = requireCurrentUser(authentication);
-        User teacher = userRepository.findById(teacherId)
-                .filter(u -> "TEACHER".equalsIgnoreCase(u.getRole()))
+        User teacher = userRepository.findById(request.getTeacherId())
+                .filter(u -> hasRole(u, "TEACHER"))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid teacher ID"));
 
         student.setTeacher(teacher);
@@ -178,31 +254,22 @@ public class AuthController {
         return ResponseEntity.ok(buildUserResponse(student));
     }
 
-    @PatchMapping("/unassign-student/{studentId}")
-    @PreAuthorize("hasRole('TEACHER')")
-    public ResponseEntity<?> unassignStudent(@PathVariable Long studentId, Authentication authentication) {
-        User teacher = requireCurrentUser(authentication);
-        User student = userRepository.findById(studentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
-
-        if (student.getTeacher() == null || !student.getTeacher().getId().equals(teacher.getId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("You can only unassign your own students");
-        }
-
+    @DeleteMapping("/api/users/me/teacher")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<CurrentUserResponse> unassignMyTeacher(Authentication authentication) {
+        User student = requireCurrentUser(authentication);
         student.setTeacher(null);
         userRepository.save(student);
-        logger.info("Teacher {} unassigned student {}", teacher.getEmail(), student.getEmail());
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(buildUserResponse(student));
     }
 
-    @GetMapping("/my-students")
+    @GetMapping("/api/teachers/me/students")
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<List<UserSummaryResponse>> getMyStudents(Authentication authentication) {
         User teacher = requireCurrentUser(authentication);
 
         List<UserSummaryResponse> students = userRepository.findAll().stream()
-                .filter(u -> "USER".equalsIgnoreCase(u.getRole()))
+                .filter(u -> hasRole(u, "USER"))
                 .filter(u -> u.getTeacher() != null && u.getTeacher().getId().equals(teacher.getId()))
                 .map(this::buildUserSummaryResponse)
                 .toList();
@@ -210,47 +277,21 @@ public class AuthController {
         return ResponseEntity.ok(students);
     }
 
-    @DeleteMapping("/delete/{userId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
-        if (userRepository.findById(userId).isEmpty()) {
-            return ResponseEntity.notFound().build();
+    @DeleteMapping("/api/teachers/me/students/{studentId}")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseEntity<Void> unassignStudent(@PathVariable Long studentId, Authentication authentication) {
+        User teacher = requireCurrentUser(authentication);
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
+
+        if (student.getTeacher() == null || !student.getTeacher().getId().equals(teacher.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only unassign your own students");
         }
 
-        userRepository.deleteById(userId);
-        return ResponseEntity.ok("User deleted successfully");
-    }
-
-    @PostMapping("/logout")
-    public ResponseEntity<?> logout() {
-        return ResponseEntity.ok("Logged out");
-    }
-
-    @PatchMapping("/update-profile")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> updateProfile(@RequestBody UpdateProfileRequest req, Authentication authentication) {
-        User user = requireCurrentUser(authentication);
-
-        if (req.getEmail() != null) {
-            String newEmail = req.getEmail().trim();
-            if (!newEmail.equalsIgnoreCase(user.getEmail())) {
-                boolean taken = userRepository.findByEmail(newEmail).isPresent();
-                if (taken) {
-                    return ResponseEntity.status(HttpStatus.CONFLICT).body("Email is already in use");
-                }
-                user.setEmail(newEmail);
-            }
-        }
-
-        if (req.getName() != null) {
-            user.setName(req.getName().trim());
-        }
-        if (req.getInstrument() != null) {
-            user.setInstrument(req.getInstrument().trim());
-        }
-
-        userRepository.save(user);
-        return ResponseEntity.ok(buildAuthResponse(user));
+        student.setTeacher(null);
+        userRepository.save(student);
+        logger.info("Teacher {} unassigned student {}", teacher.getEmail(), student.getEmail());
+        return ResponseEntity.noContent().build();
     }
 
     public static class LoginRequest {
@@ -290,6 +331,30 @@ public class AuthController {
         public void setEmail(String email) { this.email = email; }
         public String getInstrument() { return instrument; }
         public void setInstrument(String instrument) { this.instrument = instrument; }
+    }
+
+    public static class AdminUserUpdateRequest extends UpdateProfileRequest {
+        private String role;
+
+        public String getRole() {
+            return role;
+        }
+
+        public void setRole(String role) {
+            this.role = role;
+        }
+    }
+
+    public static class TeacherAssignmentRequest {
+        private Long teacherId;
+
+        public Long getTeacherId() {
+            return teacherId;
+        }
+
+        public void setTeacherId(Long teacherId) {
+            this.teacherId = teacherId;
+        }
     }
 
     public static class TeacherDto {
@@ -386,12 +451,21 @@ public class AuthController {
                 user.getEmail(),
                 user.getInstrument(),
                 user.getRole(),
-                user.getWorkingOnPieces(),
-                user.getRepertoire(),
-                user.getWishlist(),
-                user.getFavoritePieces(),
+                safePieces(user.getWorkingOnPieces()),
+                safePieces(user.getRepertoire()),
+                safePieces(user.getWishlist()),
+                safePieces(user.getFavoritePieces()),
                 teacherDto
         );
+    }
+
+    private List<Piece> safePieces(List<Piece> pieces) {
+        if (pieces == null) {
+            return List.of();
+        }
+        return pieces.stream()
+                .filter(piece -> piece != null)
+                .toList();
     }
 
     private UserSummaryResponse buildUserSummaryResponse(User user) {
@@ -424,7 +498,92 @@ public class AuthController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
 
+    private void applyUserFields(User user, UpdateProfileRequest request) {
+        if (request == null) {
+            return;
+        }
+
+        if (request.getEmail() != null) {
+            String newEmail = request.getEmail().trim();
+            if (newEmail.isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email cannot be blank");
+            }
+            if (!newEmail.equalsIgnoreCase(user.getEmail())) {
+                boolean taken = userRepository.findByEmail(newEmail).isPresent();
+                if (taken) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use");
+                }
+                user.setEmail(newEmail);
+            }
+        }
+
+        if (request.getName() != null) {
+            String name = request.getName().trim();
+            if (name.isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name cannot be blank");
+            }
+            user.setName(name);
+        }
+
+        if (request.getInstrument() != null) {
+            user.setInstrument(trimToNull(request.getInstrument()));
+        }
+    }
+
+    private void requireUserProfilePayload(UpdateProfileRequest request) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User payload is required");
+        }
+        if (request.getName() == null || request.getName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name is required");
+        }
+        if (request.getEmail() == null || request.getEmail().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required");
+        }
+    }
+
+    private void requireAdminUserPayload(AdminUserUpdateRequest request) {
+        requireUserProfilePayload(request);
+        if (request.getRole() == null || request.getRole().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Role is required");
+        }
+    }
+
+    private void updateRole(User user, String requestedRole) {
+        String targetRole = requestedRole.trim().toUpperCase(Locale.ROOT);
+        if (!List.of("USER", "TEACHER", "ADMIN").contains(targetRole)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role");
+        }
+
+        if (targetRole.equalsIgnoreCase(user.getRole())) {
+            return;
+        }
+
+        if ("TEACHER".equalsIgnoreCase(user.getRole()) && !"TEACHER".equals(targetRole)) {
+            userRepository.findAll().forEach(student -> {
+                if (student.getTeacher() != null && student.getTeacher().getId().equals(user.getId())) {
+                    student.setTeacher(null);
+                    userRepository.save(student);
+                }
+            });
+        }
+
+        if ("USER".equalsIgnoreCase(user.getRole()) && "TEACHER".equals(targetRole) && user.getTeacher() != null) {
+            user.setTeacher(null);
+        }
+
+        user.setRole(targetRole);
+    }
+
     private boolean hasRole(User user, String role) {
         return role.equalsIgnoreCase(user.getRole());
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isBlank() ? null : trimmed;
     }
 }

@@ -78,7 +78,7 @@ class LessonControllerIntegrationTest {
                 MediaType.APPLICATION_PDF_VALUE, "Dummy content".getBytes()
         );
 
-        mockMvc.perform(multipart("/api/lesson/add")
+        mockMvc.perform(multipart("/api/lessons")
                         .file(pdf)
                         .param("instrument", "Violin")
                         .param("studentId", String.valueOf(studentId))
@@ -88,7 +88,7 @@ class LessonControllerIntegrationTest {
                         .param("homework", "Practice scales")
                         .with(user(teacherEmail).roles("TEACHER")) // 👈 dynamically authenticated
                         .contentType(MediaType.MULTIPART_FORM_DATA))
-                .andExpect(status().isOk());
+                .andExpect(status().isCreated());
     }
 
     // Test: student cannot add lesson
@@ -99,7 +99,7 @@ class LessonControllerIntegrationTest {
                 MediaType.APPLICATION_PDF_VALUE, "Dummy content".getBytes()
         );
 
-        mockMvc.perform(multipart("/api/lesson/add")
+        mockMvc.perform(multipart("/api/lessons")
                         .file(pdf)
                         .param("instrument", "Flute")
                         .param("studentId", String.valueOf(studentId))

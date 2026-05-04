@@ -19,7 +19,7 @@ const MyStudents = () => {
     if (!isTeacher) return;
     setError('');
     axios
-      .get(`${API_BASE}/api/user/my-students`, getAuthAxiosConfig())
+      .get(`${API_BASE}/api/teachers/me/students`, getAuthAxiosConfig())
       .then((res) => setStudents(Array.isArray(res.data) ? res.data : []))
       .catch((err) => {
         console.error('Error fetching students:', err);
@@ -36,9 +36,8 @@ const MyStudents = () => {
     if (!studentId) return;
     if (!window.confirm('Unassign this student from you?')) return;
     try {
-      await axios.patch(
-        `${API_BASE}/api/user/unassign-student/${studentId}`,
-        {},
+      await axios.delete(
+        `${API_BASE}/api/teachers/me/students/${studentId}`,
         getAuthAxiosConfig()
       );
       setStudents((prev) => prev.filter((s) => String(s.id) !== String(studentId)));

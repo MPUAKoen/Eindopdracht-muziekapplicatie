@@ -20,9 +20,12 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
                l.startTime as startTime,
                l.endTime as endTime,
                s.id as studentId,
-               coalesce(s.name, s.email) as studentName
+               coalesce(s.name, s.email) as studentName,
+               t.id as teacherId,
+               coalesce(t.name, t.email) as teacherName
         from Lesson l
         join l.student s
+        join l.teacher t
         where l.teacher.id = :teacherId
         order by l.lessonDate desc, l.startTime asc
     """)
@@ -36,9 +39,12 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
                l.startTime as startTime,
                l.endTime as endTime,
                s.id as studentId,
-               coalesce(s.name, s.email) as studentName
+               coalesce(s.name, s.email) as studentName,
+               t.id as teacherId,
+               coalesce(t.name, t.email) as teacherName
         from Lesson l
         join l.student s
+        join l.teacher t
         where l.student.id = :studentId
         order by l.lessonDate desc, l.startTime asc
     """)
