@@ -7,6 +7,10 @@ import com.example.demo.model.Lesson;
 import com.example.demo.model.User;
 import com.example.demo.repository.LessonRepository;
 import com.example.demo.repository.UserRepository;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
@@ -17,6 +21,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -61,31 +66,29 @@ public class LessonController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<LessonDetailDto> createLesson(
-            @RequestParam String instrument,
-            @RequestParam Long studentId,
-            @RequestParam String lessonDate,
-            @RequestParam String startTime,
-            @RequestParam String endTime,
-            @RequestParam(required = false) String homework,
-            @RequestParam(required = false) List<MultipartFile> pdfFiles,
+            @Valid @ModelAttribute LessonCreateRequest request,
             Authentication authentication
     ) {
         User teacher = requireCurrentUser(authentication);
         requireTeacher(teacher);
 
-        User student = userRepository.findById(studentId)
+        User student = userRepository.findById(request.getStudentId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
         validateTeacherOwnsStudent(teacher, student);
 
         Lesson lesson = new Lesson();
-        lesson.setInstrument(requireText(instrument, "instrument"));
+        lesson.setInstrument(requireText(request.getInstrument(), "instrument"));
         lesson.setTeacher(teacher);
         lesson.setStudent(student);
-        lesson.setLessonDate(parseDate(lessonDate));
-        lesson.setStartTime(parseTime(startTime));
-        lesson.setEndTime(parseTime(endTime));
-        lesson.setHomework(trimToNull(homework));
-        lesson.setPdfFileNames(pdfFiles != null && !pdfFiles.isEmpty() ? storage.storeFiles(pdfFiles) : List.of());
+        lesson.setLessonDate(parseDate(request.getLessonDate()));
+        lesson.setStartTime(parseTime(request.getStartTime()));
+        lesson.setEndTime(parseTime(request.getEndTime()));
+        lesson.setHomework(trimToNull(request.getHomework()));
+        lesson.setPdfFileNames(
+                request.getPdfFiles() != null && !request.getPdfFiles().isEmpty()
+                        ? storage.storeFiles(request.getPdfFiles())
+                        : List.of()
+        );
 
         Lesson saved = lessonRepository.save(lesson);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -157,7 +160,7 @@ public class LessonController {
     @PreAuthorize("hasAnyRole('TEACHER','ADMIN')")
     public ResponseEntity<LessonDetailDto> replaceLesson(
             @PathVariable Long id,
-            @RequestBody LessonUpdateRequest request,
+            @Valid @RequestBody LessonUpdateRequest request,
             Authentication authentication
     ) {
         return ResponseEntity.ok(updateLesson(id, request, authentication, false));
@@ -167,7 +170,7 @@ public class LessonController {
     @PreAuthorize("hasAnyRole('TEACHER','ADMIN')")
     public ResponseEntity<LessonDetailDto> patchLesson(
             @PathVariable Long id,
-            @RequestBody LessonUpdateRequest request,
+            @Valid @RequestBody LessonUpdateRequest request,
             Authentication authentication
     ) {
         return ResponseEntity.ok(updateLesson(id, request, authentication, true));
@@ -386,12 +389,94 @@ public class LessonController {
         return trimmed.isBlank() ? null : trimmed;
     }
 
+    public static class LessonCreateRequest {
+        @NotBlank(message = "instrument is required")
+        @Size(max = 255, message = "instrument must be at most 255 characters")
+        private String instrument;
+
+        @NotNull(message = "studentId is required")
+        private Long studentId;
+
+        @NotBlank(message = "lessonDate is required")
+        private String lessonDate;
+
+        @NotBlank(message = "startTime is required")
+        private String startTime;
+
+        @NotBlank(message = "endTime is required")
+        private String endTime;
+
+        @Size(max = 5000, message = "homework must be at most 5000 characters")
+        private String homework;
+
+        private List<MultipartFile> pdfFiles;
+
+        public String getInstrument() {
+            return instrument;
+        }
+
+        public void setInstrument(String instrument) {
+            this.instrument = instrument;
+        }
+
+        public Long getStudentId() {
+            return studentId;
+        }
+
+        public void setStudentId(Long studentId) {
+            this.studentId = studentId;
+        }
+
+        public String getLessonDate() {
+            return lessonDate;
+        }
+
+        public void setLessonDate(String lessonDate) {
+            this.lessonDate = lessonDate;
+        }
+
+        public String getStartTime() {
+            return startTime;
+        }
+
+        public void setStartTime(String startTime) {
+            this.startTime = startTime;
+        }
+
+        public String getEndTime() {
+            return endTime;
+        }
+
+        public void setEndTime(String endTime) {
+            this.endTime = endTime;
+        }
+
+        public String getHomework() {
+            return homework;
+        }
+
+        public void setHomework(String homework) {
+            this.homework = homework;
+        }
+
+        public List<MultipartFile> getPdfFiles() {
+            return pdfFiles;
+        }
+
+        public void setPdfFiles(List<MultipartFile> pdfFiles) {
+            this.pdfFiles = pdfFiles;
+        }
+    }
+
     public static class LessonUpdateRequest {
+        @Size(max = 255, message = "instrument must be at most 255 characters")
         private String instrument;
         private Long studentId;
         private String lessonDate;
         private String startTime;
         private String endTime;
+
+        @Size(max = 5000, message = "homework must be at most 5000 characters")
         private String homework;
 
         public String getInstrument() {

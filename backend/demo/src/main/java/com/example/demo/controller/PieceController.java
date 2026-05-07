@@ -5,12 +5,15 @@ import com.example.demo.model.User;
 import com.example.demo.repository.PieceRepository;
 import com.example.demo.repository.UserRepository;
 import jakarta.persistence.EntityManager;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -59,7 +62,10 @@ public class PieceController {
     }
 
     @PostMapping
-    public ResponseEntity<PieceResponse> addPiece(@RequestBody PieceRequest request, Authentication authentication) {
+    public ResponseEntity<PieceResponse> addPiece(
+            @Validated(CompletePiece.class) @RequestBody PieceRequest request,
+            Authentication authentication
+    ) {
         User user = requireCurrentUser(authentication);
         String category = normalizeCategory(request.getCategory());
 
@@ -85,7 +91,7 @@ public class PieceController {
     @PutMapping("/{pieceId}")
     public ResponseEntity<PieceResponse> updatePiece(
             @PathVariable Long pieceId,
-            @RequestBody PieceRequest request,
+            @Validated(CompletePiece.class) @RequestBody PieceRequest request,
             Authentication authentication
     ) {
         return ResponseEntity.ok(updatePieceInternal(pieceId, request, authentication));
@@ -94,7 +100,7 @@ public class PieceController {
     @PatchMapping("/{pieceId}")
     public ResponseEntity<PieceResponse> patchPiece(
             @PathVariable Long pieceId,
-            @RequestBody PieceRequest request,
+            @Validated @RequestBody PieceRequest request,
             Authentication authentication
     ) {
         return ResponseEntity.ok(updatePieceInternal(pieceId, request, authentication));
@@ -315,10 +321,23 @@ public class PieceController {
     private record CurrentUserRef(Long id, String email) {
     }
 
+    private interface CompletePiece {
+    }
+
     public static class PieceRequest {
+        @NotBlank(message = "title is required", groups = CompletePiece.class)
+        @Size(max = 255, message = "title must be at most 255 characters")
         private String title;
+
+        @NotBlank(message = "composer is required", groups = CompletePiece.class)
+        @Size(max = 255, message = "composer must be at most 255 characters")
         private String composer;
+
+        @Size(max = 1000, message = "notes must be at most 1000 characters")
         private String notes;
+
+        @NotBlank(message = "category is required", groups = CompletePiece.class)
+        @Size(max = 50, message = "category must be at most 50 characters")
         private String category;
 
         public String getTitle() {

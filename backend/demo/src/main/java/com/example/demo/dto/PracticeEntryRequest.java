@@ -1,12 +1,15 @@
 package com.example.demo.dto;
 
 import com.example.demo.model.PracticeType;
+import jakarta.validation.constraints.Positive;
 
 import java.time.LocalDateTime;
 
 public class PracticeEntryRequest {
 
     private PracticeType type;
+
+    @Positive(message = "minutes must be greater than 0")
     private Integer minutes;
     private LocalDateTime dateTime;
 

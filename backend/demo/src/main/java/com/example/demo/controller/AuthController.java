@@ -5,6 +5,10 @@ import com.example.demo.model.User;
 import com.example.demo.repository.LessonRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.security.JwtService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -50,20 +54,7 @@ public class AuthController {
     }
 
     @PostMapping("/api/auth/register")
-    public ResponseEntity<AuthResponse> registerUser(@RequestBody RegisterRequest request) {
-        if (request == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Registration payload is required");
-        }
-        if (request.getEmail() == null || request.getEmail().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required");
-        }
-        if (request.getPassword() == null || request.getPassword().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password is required");
-        }
-        if (request.getName() == null || request.getName().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name is required");
-        }
-
+    public ResponseEntity<AuthResponse> registerUser(@Valid @RequestBody RegisterRequest request) {
         if (userRepository.findByEmail(request.getEmail().trim()).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use");
         }
@@ -80,11 +71,7 @@ public class AuthController {
     }
 
     @PostMapping("/api/auth/login")
-    public ResponseEntity<AuthResponse> loginUser(@RequestBody LoginRequest request) {
-        if (request == null || request.getEmail() == null || request.getPassword() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email and password are required");
-        }
-
+    public ResponseEntity<AuthResponse> loginUser(@Valid @RequestBody LoginRequest request) {
         Optional<User> optionalUser = userRepository.findByEmail(request.getEmail().trim());
         if (optionalUser.isPresent()) {
             User user = optionalUser.get();
@@ -111,7 +98,7 @@ public class AuthController {
     @PatchMapping("/api/users/me")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AuthResponse> updateProfile(
-            @RequestBody UpdateProfileRequest request,
+            @Valid @RequestBody UpdateProfileRequest request,
             Authentication authentication
     ) {
         User user = requireCurrentUser(authentication);
@@ -123,7 +110,7 @@ public class AuthController {
     @PutMapping("/api/users/me")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AuthResponse> replaceProfile(
-            @RequestBody UpdateProfileRequest request,
+            @Valid @RequestBody UpdateProfileRequest request,
             Authentication authentication
     ) {
         User user = requireCurrentUser(authentication);
@@ -167,7 +154,7 @@ public class AuthController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserSummaryResponse> updateUser(
             @PathVariable Long userId,
-            @RequestBody AdminUserUpdateRequest request
+            @Valid @RequestBody AdminUserUpdateRequest request
     ) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
@@ -190,7 +177,7 @@ public class AuthController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserSummaryResponse> replaceUser(
             @PathVariable Long userId,
-            @RequestBody AdminUserUpdateRequest request
+            @Valid @RequestBody AdminUserUpdateRequest request
     ) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
@@ -236,7 +223,7 @@ public class AuthController {
     @PutMapping("/api/users/me/teacher")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<CurrentUserResponse> assignTeacher(
-            @RequestBody TeacherAssignmentRequest request,
+            @Valid @RequestBody TeacherAssignmentRequest request,
             Authentication authentication
     ) {
         if (request == null || request.getTeacherId() == null) {
@@ -295,7 +282,11 @@ public class AuthController {
     }
 
     public static class LoginRequest {
+        @NotBlank(message = "Email is required")
+        @Email(message = "Email must be valid")
         private String email;
+
+        @NotBlank(message = "Password is required")
         private String password;
 
         public String getEmail() { return email; }
@@ -305,9 +296,20 @@ public class AuthController {
     }
 
     public static class RegisterRequest {
+        @NotBlank(message = "Name is required")
+        @Size(max = 255, message = "Name must be at most 255 characters")
         private String name;
+
+        @NotBlank(message = "Email is required")
+        @Email(message = "Email must be valid")
+        @Size(max = 255, message = "Email must be at most 255 characters")
         private String email;
+
+        @NotBlank(message = "Password is required")
+        @Size(min = 6, max = 72, message = "Password must be between 6 and 72 characters")
         private String password;
+
+        @Size(max = 255, message = "Instrument must be at most 255 characters")
         private String instrument;
 
         public String getName() { return name; }
@@ -321,8 +323,14 @@ public class AuthController {
     }
 
     public static class UpdateProfileRequest {
+        @Size(max = 255, message = "Name must be at most 255 characters")
         private String name;
+
+        @Email(message = "Email must be valid")
+        @Size(max = 255, message = "Email must be at most 255 characters")
         private String email;
+
+        @Size(max = 255, message = "Instrument must be at most 255 characters")
         private String instrument;
 
         public String getName() { return name; }
@@ -334,6 +342,7 @@ public class AuthController {
     }
 
     public static class AdminUserUpdateRequest extends UpdateProfileRequest {
+        @Size(max = 20, message = "Role must be at most 20 characters")
         private String role;
 
         public String getRole() {
@@ -346,6 +355,7 @@ public class AuthController {
     }
 
     public static class TeacherAssignmentRequest {
+        @jakarta.validation.constraints.NotNull(message = "teacherId is required")
         private Long teacherId;
 
         public Long getTeacherId() {

@@ -97,6 +97,27 @@ class PieceControllerIntegrationTest {
     }
 
     @Test
+    void createPiece_MissingRequiredFields_ShouldReturnValidationDetails() throws Exception {
+        mockMvc.perform(post("/api/pieces")
+                        .with(user(email).roles("USER"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                              "title": "",
+                              "composer": "",
+                              "category": ""
+                            }
+                            """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Validation failed")))
+                .andExpect(jsonPath("$.validationErrors[*].field").value(org.hamcrest.Matchers.hasItems(
+                        "title",
+                        "composer",
+                        "category"
+                )));
+    }
+
+    @Test
     void deleteSeedLikePiece_WithRealJwtAuthentication_Succeeds() throws Exception {
         String jwtEmail = "seed_like_" + UUID.randomUUID() + "@mail.com";
 

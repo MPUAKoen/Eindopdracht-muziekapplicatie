@@ -46,6 +46,26 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
+    void registerUser_MissingRequiredFields_ShouldReturnValidationDetails() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                              "name": "",
+                              "email": "",
+                              "password": ""
+                            }
+                            """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Validation failed")))
+                .andExpect(jsonPath("$.validationErrors[*].field").value(org.hamcrest.Matchers.hasItems(
+                        "name",
+                        "email",
+                        "password"
+                )));
+    }
+
+    @Test
     void loginUser_WrongPassword_ShouldReturnUnauthorized() throws Exception {
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

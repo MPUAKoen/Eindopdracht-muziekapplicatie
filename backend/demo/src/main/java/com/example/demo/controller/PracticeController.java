@@ -5,6 +5,7 @@ import com.example.demo.dto.PracticeEntryRequest;
 import com.example.demo.dto.PracticeSummaryDto;
 import com.example.demo.model.PracticeEntry;
 import com.example.demo.model.PracticeType;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -42,7 +43,7 @@ public class PracticeController {
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<PracticeEntryResponse> addPracticeEntry(@RequestBody PracticeEntryRequest request) {
+    public ResponseEntity<PracticeEntryResponse> addPracticeEntry(@Valid @RequestBody PracticeEntryRequest request) {
         PracticeEntry created = practiceService.addEntryForCurrentUser(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
@@ -55,7 +56,7 @@ public class PracticeController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PracticeEntryResponse> replacePracticeEntry(
             @PathVariable Long id,
-            @RequestBody PracticeEntryRequest request
+            @Valid @RequestBody PracticeEntryRequest request
     ) {
         return ResponseEntity.ok(toResponse(practiceService.replaceEntryForCurrentUser(id, request)));
     }
@@ -64,7 +65,7 @@ public class PracticeController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PracticeEntryResponse> updatePracticeEntry(
             @PathVariable Long id,
-            @RequestBody PracticeEntryRequest request
+            @Valid @RequestBody PracticeEntryRequest request
     ) {
         return ResponseEntity.ok(toResponse(practiceService.updateEntryForCurrentUser(id, request)));
     }
