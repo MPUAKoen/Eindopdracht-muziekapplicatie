@@ -2,9 +2,9 @@ package com.example.demo.controller;
 
 import com.example.demo.model.Piece;
 import com.example.demo.model.User;
-import com.example.demo.repository.LessonRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.security.JwtService;
+import jakarta.persistence.EntityManager;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -17,6 +17,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -39,18 +40,18 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final LessonRepository lessonRepository;
+    private final EntityManager entityManager;
 
     public AuthController(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
-            LessonRepository lessonRepository
+            EntityManager entityManager
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
-        this.lessonRepository = lessonRepository;
+        this.entityManager = entityManager;
     }
 
     @PostMapping("/api/auth/register")
@@ -192,22 +193,15 @@ public class AuthController {
 
     @DeleteMapping("/api/users/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
     public ResponseEntity<Void> deleteUser(@PathVariable Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        if (hasRole(user, "TEACHER")) {
-            userRepository.findAll().stream()
-                    .filter(student -> student.getTeacher() != null && userId.equals(student.getTeacher().getId()))
-                    .forEach(student -> {
-                        student.setTeacher(null);
-                        userRepository.save(student);
-                    });
-        }
-
-        lessonRepository.deleteAll(lessonRepository.findByTeacher(user));
-        lessonRepository.deleteAll(lessonRepository.findByStudent(user));
-        userRepository.delete(user);
+        logger.info("Admin deleting user {} ({})", user.getId(), user.getEmail());
+        deleteUserDependencies(userId);
+        entityManager.clear();
+        executeNativeUpdate("delete from users where id = :userId", userId);
         return ResponseEntity.noContent().build();
     }
 
@@ -500,6 +494,37 @@ public class AuthController {
                 jwtService.getExpirationMs() / 1000,
                 buildUserResponse(user)
         );
+    }
+
+    private void deleteUserDependencies(Long userId) {
+        executeNativeUpdate("update users set teacher_id = null where teacher_id = :userId", userId);
+        executeNativeUpdate("""
+                delete from lesson_files
+                where lesson_id in (
+                    select id
+                    from lessons
+                    where teacher_id = :userId
+                       or student_id = :userId
+                )
+                """, userId);
+        executeNativeUpdate("delete from lessons where teacher_id = :userId or student_id = :userId", userId);
+        executeNativeUpdate("delete from practice_entry where practice_log_id = :userId", userId);
+        executeNativeUpdate("delete from practice_log where user_id = :userId", userId);
+
+        for (String tableName : List.of(
+                "user_favorite_piece_links",
+                "user_wishlist_piece_links",
+                "user_working_piece_links",
+                "user_repertoire_piece_links"
+        )) {
+            executeNativeUpdate("delete from " + tableName + " where user_id = :userId", userId);
+        }
+    }
+
+    private void executeNativeUpdate(String sql, Long userId) {
+        entityManager.createNativeQuery(sql)
+                .setParameter("userId", userId)
+                .executeUpdate();
     }
 
     private User requireCurrentUser(Authentication authentication) {
