@@ -54,7 +54,7 @@ const AboutPage = () => {
 
   // personal info state for inline edit
   const [profile, setProfile] = useState({ name: '', email: '', instrument: '' });
-  const [editingField, setEditingField] = useState(null); // 'name' | 'email' | 'instrument' | null
+  const [editingField, setEditingField] = useState(null); // 'name' | 'email' | 'instrument' | 'password' | null
   const [tempValue, setTempValue] = useState('');
 
   const loadPieces = async (category, setList) => {
@@ -158,7 +158,7 @@ const AboutPage = () => {
 
   const beginEdit = (field) => {
     setEditingField(field);
-    setTempValue(profile[field] ?? '');
+    setTempValue(field === 'password' ? '' : (profile[field] ?? ''));
   };
 
   const cancelEdit = () => {
@@ -168,6 +168,11 @@ const AboutPage = () => {
 
   const saveEdit = async () => {
     if (!editingField) return;
+    if (editingField === 'password' && tempValue.length < 6) {
+      alert('Password must be at least 6 characters.');
+      return;
+    }
+
     const payload = { [editingField]: tempValue };
 
     try {
@@ -177,7 +182,9 @@ const AboutPage = () => {
         body: JSON.stringify(payload)
       });
 
-      let next = { ...profile, [editingField]: tempValue };
+      let next = editingField === 'password'
+        ? { ...profile }
+        : { ...profile, [editingField]: tempValue };
       if (res.ok) {
         try {
           const updated = await res.json();
@@ -194,6 +201,9 @@ const AboutPage = () => {
         setProfile(next);
         setEditingField(null);
         setTempValue('');
+        if (editingField === 'password') {
+          alert('Password updated successfully.');
+        }
       } else {
         const txt = await res.text();
         throw new Error(txt || `HTTP ${res.status}`);
@@ -388,6 +398,34 @@ const AboutPage = () => {
                       aria-label="Edit instrument"
                     >
                       🖉
+                    </button>
+                  </>
+                )}
+              </td>
+
+              <td className="summary-cell">
+                <strong>Reset Password:</strong>{' '}
+                {editingField === 'password' ? (
+                  <>
+                    <input
+                      type="password"
+                      value={tempValue}
+                      onChange={(e) => setTempValue(e.target.value)}
+                      placeholder="New password"
+                    />
+                    <button className="icon-button" onClick={saveEdit} aria-label="Save">Save</button>
+                    <button className="icon-button" onClick={cancelEdit} aria-label="Cancel">Cancel</button>
+                  </>
+                ) : (
+                  <>
+                    ••••••
+                    <button
+                      className="icon-button"
+                      title="Reset password"
+                      onClick={() => beginEdit('password')}
+                      aria-label="Reset password"
+                    >
+                      Change
                     </button>
                   </>
                 )}

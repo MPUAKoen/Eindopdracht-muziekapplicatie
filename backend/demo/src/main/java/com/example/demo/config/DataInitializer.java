@@ -35,12 +35,8 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) {
         repairPieceOrderColumns();
 
-        if (userRepository.count() > 0) {
-            return;
-        }
-
         String defaultPassword = passwordEncoder.encode("Test123");
-        System.out.println("Seeding realistic demo data...");
+        System.out.println("Ensuring realistic demo data...");
 
         Map<String, String[][]> instrumentPieces = Map.of(
                 "Piano", new String[][]{
@@ -169,49 +165,42 @@ public class DataInitializer implements CommandLineRunner {
         };
 
         for (int i = 1; i <= 2; i++) {
-            User admin = new User();
+            User admin = userRepository.findByEmail("admin" + i + "@email.com").orElseGet(User::new);
             admin.setName("Admin " + i);
             admin.setEmail("admin" + i + "@email.com");
             admin.setPassword(defaultPassword);
             admin.setInstrument("Piano");
             admin.setRole("ADMIN");
-            admin.setFavoritePieces(generatePiecesForInstrument.apply("Piano"));
-            admin.setWishlist(generatePiecesForInstrument.apply("Piano"));
-            admin.setWorkingOnPieces(generatePiecesForInstrument.apply("Piano"));
-            admin.setRepertoire(generatePiecesForInstrument.apply("Piano"));
+            admin.setTeacher(null);
+            ensureDemoPieces(admin, generatePiecesForInstrument, "Piano");
             userRepository.save(admin);
         }
 
         String[] teacherInstruments = {"Piano", "Opera", "Violin", "Guitar", "Drums", "Harp", "Flute", "Cello", "Clarinet", "Voice"};
         Map<String, User> teachersByInstrument = new HashMap<>();
         for (String instrument : teacherInstruments) {
-            User teacher = new User();
+            User teacher = userRepository.findByEmail("teacher" + instrument.toLowerCase() + "@email.com").orElseGet(User::new);
             teacher.setName("Teacher " + instrument);
             teacher.setEmail("teacher" + instrument.toLowerCase() + "@email.com");
             teacher.setPassword(defaultPassword);
             teacher.setInstrument(instrument);
             teacher.setRole("TEACHER");
-            teacher.setFavoritePieces(generatePiecesForInstrument.apply(instrument));
-            teacher.setWishlist(generatePiecesForInstrument.apply(instrument));
-            teacher.setWorkingOnPieces(generatePiecesForInstrument.apply(instrument));
-            teacher.setRepertoire(generatePiecesForInstrument.apply(instrument));
-            userRepository.save(teacher);
-            teachersByInstrument.put(instrument.toLowerCase(), teacher);
+            teacher.setTeacher(null);
+            ensureDemoPieces(teacher, generatePiecesForInstrument, instrument);
+            User savedTeacher = userRepository.save(teacher);
+            teachersByInstrument.put(instrument.toLowerCase(), savedTeacher);
         }
 
         String[] studentInstruments = {"Piano", "Opera", "Violin", "Guitar", "Drums", "Harp"};
         for (String instrument : studentInstruments) {
             for (int i = 1; i <= 5; i++) {
-                User student = new User();
+                User student = userRepository.findByEmail("student" + instrument.toLowerCase() + i + "@email.com").orElseGet(User::new);
                 student.setName("Student " + instrument + " " + i);
                 student.setEmail("student" + instrument.toLowerCase() + i + "@email.com");
                 student.setPassword(defaultPassword);
                 student.setInstrument(instrument);
                 student.setRole("USER");
-                student.setFavoritePieces(generatePiecesForInstrument.apply(instrument));
-                student.setWishlist(generatePiecesForInstrument.apply(instrument));
-                student.setWorkingOnPieces(generatePiecesForInstrument.apply(instrument));
-                student.setRepertoire(generatePiecesForInstrument.apply(instrument));
+                ensureDemoPieces(student, generatePiecesForInstrument, instrument);
 
                 User teacher = teachersByInstrument.get(instrument.toLowerCase());
                 if (teacher != null) {
@@ -222,12 +211,30 @@ public class DataInitializer implements CommandLineRunner {
             }
         }
 
-        System.out.println("Database seeded successfully with:");
-        System.out.println("  - 2 Admins");
-        System.out.println("  - 10 Teachers");
-        System.out.println("  - 30 Students (no Voice students, replaced by Harp)");
-        System.out.println("  - 10 instrument-specific pieces per category each");
-        System.out.println("  - Students linked to matching teachers");
+        System.out.println("Demo database is ready:");
+        System.out.println("  - admin1@email.com / Test123");
+        System.out.println("  - teacherpiano@email.com / Test123");
+        System.out.println("  - studentpiano1@email.com / Test123");
+        System.out.println("  - Demo students linked to matching teachers");
+    }
+
+    private void ensureDemoPieces(
+            User user,
+            Function<String, List<Piece>> generatePiecesForInstrument,
+            String instrument
+    ) {
+        if (user.getFavoritePieces().isEmpty()) {
+            user.setFavoritePieces(generatePiecesForInstrument.apply(instrument));
+        }
+        if (user.getWishlist().isEmpty()) {
+            user.setWishlist(generatePiecesForInstrument.apply(instrument));
+        }
+        if (user.getWorkingOnPieces().isEmpty()) {
+            user.setWorkingOnPieces(generatePiecesForInstrument.apply(instrument));
+        }
+        if (user.getRepertoire().isEmpty()) {
+            user.setRepertoire(generatePiecesForInstrument.apply(instrument));
+        }
     }
 
     private void repairPieceOrderColumns() {

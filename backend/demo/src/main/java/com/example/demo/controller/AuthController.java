@@ -333,12 +333,17 @@ public class AuthController {
         @Size(max = 255, message = "Instrument must be at most 255 characters")
         private String instrument;
 
+        @Size(min = 6, max = 72, message = "Password must be between 6 and 72 characters")
+        private String password;
+
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
         public String getEmail() { return email; }
         public void setEmail(String email) { this.email = email; }
         public String getInstrument() { return instrument; }
         public void setInstrument(String instrument) { this.instrument = instrument; }
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
     }
 
     public static class AdminUserUpdateRequest extends UpdateProfileRequest {
@@ -537,6 +542,17 @@ public class AuthController {
 
         if (request.getInstrument() != null) {
             user.setInstrument(trimToNull(request.getInstrument()));
+        }
+
+        if (request.getPassword() != null) {
+            String password = request.getPassword().trim();
+            if (password.isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password cannot be blank");
+            }
+            if (password.length() < 6 || password.length() > 72) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password must be between 6 and 72 characters");
+            }
+            user.setPassword(passwordEncoder.encode(password));
         }
     }
 

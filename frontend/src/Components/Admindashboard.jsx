@@ -9,63 +9,104 @@ const Admindashboard = () => {
   const { user } = useUser();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [actionInProgress, setActionInProgress] = useState(false);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // 🔹 Fetch all users except the logged-in admin
-  const fetchUsers = () => {
-    authFetch(`${API_BASE}/api/users`)
-      .then(res => res.json())
-      .then(data => {
-        // Filter out the current admin AND all admin accounts
-        const filtered = Array.isArray(data)
-          ? data.filter(
-              u =>
-                String(u.id) !== String(user?.id) &&
-                u.role.toUpperCase() !== 'ADMIN'
-            )
-          : [];
-        setUsers(filtered);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Error fetching users:', err);
-        setUsers([]);
-        setLoading(false);
+  const fetchUsers = async ({ showRefresh = false } = {}) => {
+    if (showRefresh) {
+      setRefreshing(true);
+    }
+
+    try {
+      const res = await authFetch(`${API_BASE}/api/users`);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      const filtered = Array.isArray(data)
+        ? data.filter(
+            u =>
+              String(u.id) !== String(user?.id) &&
+              u.role?.toUpperCase() !== 'ADMIN'
+          )
+        : [];
+
+      setUsers(filtered);
+      setCurrentPage(page => {
+        const nextTotalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+        return Math.min(page, nextTotalPages);
       });
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      setUsers([]);
+      alert('Could not refresh users. Please try again.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
   useEffect(() => {
     if (user) fetchUsers();
   }, [user]);
 
-  //  Toggle user role (teacher <-> student)
-  const toggleUserRole = (userId) => {
+  const toggleUserRole = async (userId) => {
+    if (actionInProgress) return;
+
     const selectedUser = users.find((u) => String(u.id) === String(userId));
     const nextRole = selectedUser?.role === 'TEACHER' ? 'USER' : 'TEACHER';
 
-    authFetch(`${API_BASE}/api/users/${userId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: nextRole }),
-    })
-      .then(res => (res.ok ? fetchUsers() : alert('Failed to update user role.')))
-      .catch(err => console.error('Toggle role error:', err));
+    setActionInProgress(true);
+    try {
+      const res = await authFetch(`${API_BASE}/api/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: nextRole }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      await fetchUsers();
+    } catch (err) {
+      console.error('Toggle role error:', err);
+      alert('Failed to update user role. Refreshing the list.');
+      await fetchUsers({ showRefresh: true });
+    } finally {
+      setActionInProgress(false);
+    }
   };
 
-  //  Delete user
-  const deleteUser = (userId) => {
+  const deleteUser = async (userId) => {
+    if (actionInProgress) return;
     if (!window.confirm('Are you sure you want to delete this user?')) return;
-    authFetch(`${API_BASE}/api/users/${userId}`, {
-      method: 'DELETE',
-    })
-      .then(res => (res.ok ? fetchUsers() : alert('Failed to delete user.')))
-      .catch(err => console.error('Delete error:', err));
+
+    setActionInProgress(true);
+    try {
+      const res = await authFetch(`${API_BASE}/api/users/${userId}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      setUsers(currentUsers => currentUsers.filter(u => String(u.id) !== String(userId)));
+      await fetchUsers();
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('Failed to delete user. Refreshing the list.');
+      await fetchUsers({ showRefresh: true });
+    } finally {
+      setActionInProgress(false);
+    }
   };
 
   if (loading) return <div>Loading...</div>;
 
-  //  Filter users by name or email
   const filteredUsers = users.filter(u => {
     if (!search.trim()) return true;
     return (
@@ -74,7 +115,6 @@ const Admindashboard = () => {
     );
   });
 
-  //  Pagination
   const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const paginatedUsers = filteredUsers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
@@ -86,17 +126,27 @@ const Admindashboard = () => {
           <h1>Admin Dashboard</h1>
         </div>
 
-        {/*  Search bar */}
-        <div className="search-bar">
-          <input
-            type="text"
-            placeholder="Search by name or email..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setCurrentPage(1); 
-            }}
-          />
+        <div className="admin-toolbar">
+          <div className="search-bar">
+            <input
+              type="text"
+              placeholder="Search by name or email..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+
+          <button
+            className="refresh-btn"
+            type="button"
+            onClick={() => fetchUsers({ showRefresh: true })}
+            disabled={refreshing || actionInProgress}
+          >
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
         </div>
 
         <div className="table-container">
@@ -113,8 +163,8 @@ const Admindashboard = () => {
             </thead>
             <tbody>
               {paginatedUsers.length > 0 ? (
-                paginatedUsers.map((u, index) => (
-                  <tr key={index}>
+                paginatedUsers.map((u) => (
+                  <tr key={u.id}>
                     <td>{u.name}</td>
                     <td className="email-col">{u.email}</td>
                     <td>{u.instrument || 'N/A'}</td>
@@ -123,6 +173,7 @@ const Admindashboard = () => {
                       <div className="action-buttons">
                         <button
                           className="action-btn role-btn"
+                          disabled={actionInProgress}
                           onClick={() => toggleUserRole(u.id)}
                         >
                           {u.role === 'TEACHER'
@@ -131,6 +182,7 @@ const Admindashboard = () => {
                         </button>
                         <button
                           className="action-btn delete-btn"
+                          disabled={actionInProgress}
                           onClick={() => deleteUser(u.id)}
                         >
                           Delete
@@ -149,7 +201,6 @@ const Admindashboard = () => {
             </tbody>
           </table>
 
-          {/* 🔹 Pagination controls */}
           <div className="pagination">
             <button
               onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}

@@ -1,6 +1,7 @@
 package com.example.demo.Integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -13,12 +14,13 @@ import java.util.UUID;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(properties = "app.seed.enabled=true")
 @AutoConfigureMockMvc
 class AuthControllerIntegrationTest {
 
@@ -76,6 +78,66 @@ class AuthControllerIntegrationTest {
                             }
                             """))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void loginUser_SeededTeacherCredentials_ShouldReturnJwtPayload() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                              "email": "teacherpiano@email.com",
+                              "password": "Test123"
+                            }
+                            """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").exists())
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.user.email").value("teacherpiano@email.com"))
+                .andExpect(jsonPath("$.user.role").value("TEACHER"));
+    }
+
+    @Test
+    void updateProfile_WithPassword_ShouldAllowLoginWithNewPassword() throws Exception {
+        String email = "password_reset_" + UUID.randomUUID() + "@mail.com";
+        String oldPassword = "secret123";
+        String newPassword = "newSecret123";
+
+        Map<String, Object> registerPayload = Map.of(
+                "name", "Password Reset User",
+                "email", email,
+                "password", oldPassword,
+                "instrument", "Piano"
+        );
+
+        String registerJson = mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(registerPayload)))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode registerResponse = objectMapper.readTree(registerJson);
+        String token = registerResponse.path("token").asText();
+
+        mockMvc.perform(patch("/api/users/me")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("password", newPassword))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").exists())
+                .andExpect(jsonPath("$.user.email").value(email));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "email", email,
+                                "password", newPassword
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").exists())
+                .andExpect(jsonPath("$.user.email").value(email));
     }
 
     @Test

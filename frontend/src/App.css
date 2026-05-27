@@ -473,6 +473,37 @@ header h1 {
 
 
 /* === Admin Dashboard action buttons === */
+.admin-toolbar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin: 16px auto;
+  width: min(80%, 680px);
+}
+
+.refresh-btn {
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: none;
+  background: #d0a16d;
+  color: black;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s ease-in-out;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: #8c6e3e;
+  color: white;
+}
+
+.refresh-btn:disabled,
+.table .action-buttons button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .table .action-buttons {
   display: flex;
   flex-direction: column;  /* stack vertically */
@@ -514,7 +545,7 @@ header h1 {
 
 /* 🔍 Search bar styling */
 .search-bar {
-  margin: 16px auto;
+  margin: 0;
   text-align: center;
 }
 
