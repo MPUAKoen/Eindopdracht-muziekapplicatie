@@ -91,6 +91,84 @@ class LessonControllerIntegrationTest {
                 .andExpect(status().isCreated());
     }
 
+    @Test
+    void addLesson_WhenTimeOverlaps_ShouldReturnConflict() throws Exception {
+        MockMultipartFile firstPdf = new MockMultipartFile(
+                "pdfFiles", "lesson-one.pdf",
+                MediaType.APPLICATION_PDF_VALUE, "Dummy content".getBytes()
+        );
+
+        LocalDate lessonDate = LocalDate.now();
+
+        mockMvc.perform(multipart("/api/lessons")
+                        .file(firstPdf)
+                        .param("instrument", "Violin")
+                        .param("studentId", String.valueOf(studentId))
+                        .param("lessonDate", lessonDate.toString())
+                        .param("startTime", "09:00")
+                        .param("endTime", "09:30")
+                        .param("homework", "Practice scales")
+                        .with(user(teacherEmail).roles("TEACHER"))
+                        .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isCreated());
+
+        MockMultipartFile overlappingPdf = new MockMultipartFile(
+                "pdfFiles", "lesson-two.pdf",
+                MediaType.APPLICATION_PDF_VALUE, "Dummy content".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/lessons")
+                        .file(overlappingPdf)
+                        .param("instrument", "Violin")
+                        .param("studentId", String.valueOf(studentId))
+                        .param("lessonDate", lessonDate.toString())
+                        .param("startTime", "09:15")
+                        .param("endTime", "09:45")
+                        .param("homework", "Practice etude")
+                        .with(user(teacherEmail).roles("TEACHER"))
+                        .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void addLesson_WhenTimeOverlapsByTenMinutes_ShouldReturnCreated() throws Exception {
+        MockMultipartFile firstPdf = new MockMultipartFile(
+                "pdfFiles", "lesson-one.pdf",
+                MediaType.APPLICATION_PDF_VALUE, "Dummy content".getBytes()
+        );
+
+        LocalDate lessonDate = LocalDate.now();
+
+        mockMvc.perform(multipart("/api/lessons")
+                        .file(firstPdf)
+                        .param("instrument", "Violin")
+                        .param("studentId", String.valueOf(studentId))
+                        .param("lessonDate", lessonDate.toString())
+                        .param("startTime", "09:00")
+                        .param("endTime", "09:30")
+                        .param("homework", "Practice scales")
+                        .with(user(teacherEmail).roles("TEACHER"))
+                        .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isCreated());
+
+        MockMultipartFile slightlyOverlappingPdf = new MockMultipartFile(
+                "pdfFiles", "lesson-two.pdf",
+                MediaType.APPLICATION_PDF_VALUE, "Dummy content".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/lessons")
+                        .file(slightlyOverlappingPdf)
+                        .param("instrument", "Violin")
+                        .param("studentId", String.valueOf(studentId))
+                        .param("lessonDate", lessonDate.toString())
+                        .param("startTime", "09:20")
+                        .param("endTime", "09:50")
+                        .param("homework", "Practice etude")
+                        .with(user(teacherEmail).roles("TEACHER"))
+                        .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isCreated());
+    }
+
     // Test: student cannot add lesson
     @Test
     void addLesson_AsStudent_ShouldReturnForbidden() throws Exception {

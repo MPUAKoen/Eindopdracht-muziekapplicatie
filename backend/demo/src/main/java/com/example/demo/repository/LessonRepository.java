@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 public interface LessonRepository extends JpaRepository<Lesson, Long> {
@@ -53,4 +55,22 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
     // keep if used elsewhere
     List<Lesson> findByStudent(User student);
     List<Lesson> findByTeacher(User teacher);
+
+    @Query("""
+        select l
+        from Lesson l
+        where l.lessonDate = :lessonDate
+          and (:excludeLessonId is null or l.id <> :excludeLessonId)
+          and (l.teacher.id = :teacherId or l.student.id = :studentId)
+          and l.startTime < :endTime
+          and l.endTime > :startTime
+    """)
+    List<Lesson> findOverlappingLessons(
+            @Param("teacherId") Long teacherId,
+            @Param("studentId") Long studentId,
+            @Param("lessonDate") LocalDate lessonDate,
+            @Param("startTime") LocalTime startTime,
+            @Param("endTime") LocalTime endTime,
+            @Param("excludeLessonId") Long excludeLessonId
+    );
 }

@@ -2,10 +2,22 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useUser } from '../Context/UserContext';
 import DatePicker from 'react-datepicker';
-import { format, setHours, setMinutes } from 'date-fns';
+import { format } from 'date-fns';
 import { API_BASE, getAuthAxiosConfig } from '../lib/auth';
 import 'react-datepicker/dist/react-datepicker.css';
 import '../App.css';
+
+const createTime = (hour, minute) => {
+  const date = new Date();
+  date.setHours(hour, minute, 0, 0);
+  return date;
+};
+
+const normalizedTime = (date) => {
+  const normalized = new Date(date);
+  normalized.setSeconds(0, 0);
+  return normalized;
+};
 
 const Schedule = () => {
   const { user, loading } = useUser();
@@ -15,8 +27,8 @@ const Schedule = () => {
   const [instrument, setInstrument] = useState('');
   const [studentId, setStudentId] = useState('');
   const [lessonDate, setLessonDate] = useState(null);
-  const [startTime, setStartTime] = useState(() => setHours(setMinutes(new Date(), 0), 9)); // default 09:00
-  const [endTime, setEndTime] = useState(() => setHours(setMinutes(new Date(), 30), 9));   // optional: default 09:30
+  const [startTime, setStartTime] = useState(() => createTime(9, 0));
+  const [endTime, setEndTime] = useState(() => createTime(9, 30));
   const [homework, setHomework] = useState('');
   const [pdfFiles, setPdfFiles] = useState([]);
   const fileInputRef = useRef(null);
@@ -46,9 +58,17 @@ const Schedule = () => {
       return;
     }
 
+    const cleanStartTime = normalizedTime(startTime);
+    const cleanEndTime = normalizedTime(endTime);
+
+    if (cleanStartTime >= cleanEndTime) {
+      alert('End time must be after start time.');
+      return;
+    }
+
     const formattedDate = format(lessonDate, 'dd-MM-yyyy');
-    const formattedStart = format(startTime, 'HH:mm:ss');
-    const formattedEnd = format(endTime, 'HH:mm:ss');
+    const formattedStart = format(cleanStartTime, 'HH:mm:ss');
+    const formattedEnd = format(cleanEndTime, 'HH:mm:ss');
 
     const formData = new FormData();
     formData.append('instrument', instrument);
@@ -67,14 +87,18 @@ const Schedule = () => {
       setInstrument('');
       setStudentId('');
       setLessonDate(null);
-      setStartTime(setHours(setMinutes(new Date(), 0), 9)); // reset to 09:00
-      setEndTime(setHours(setMinutes(new Date(), 30), 9));   // reset to 09:30
+      setStartTime(createTime(9, 0));
+      setEndTime(createTime(9, 30));
       setHomework('');
       setPdfFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err) {
       console.error('Scheduling error:', err);
-      alert('Failed to schedule lesson.');
+      if (err.response?.status === 409) {
+        alert('This teacher or student already has a lesson at that time.');
+      } else {
+        alert('Failed to schedule lesson.');
+      }
     }
   };
 
@@ -149,7 +173,7 @@ const Schedule = () => {
               <label htmlFor="startTime">Start Time</label>
               <DatePicker
                 selected={startTime}
-                onChange={(time) => setStartTime(time)}
+                onChange={(time) => setStartTime(normalizedTime(time))}
                 showTimeSelect
                 showTimeSelectOnly
                 timeIntervals={5}
@@ -167,7 +191,7 @@ const Schedule = () => {
               <label htmlFor="endTime">End Time</label>
               <DatePicker
                 selected={endTime}
-                onChange={(time) => setEndTime(time)}
+                onChange={(time) => setEndTime(normalizedTime(time))}
                 showTimeSelect
                 showTimeSelectOnly
                 timeIntervals={5}

@@ -205,6 +205,14 @@ export default function MyLessons() {
         body: JSON.stringify(payload),
       });
 
+      if (!res.ok) {
+        if (res.status === 409) {
+          alert('This teacher or student already has a lesson at that time.');
+          return;
+        }
+        throw new Error();
+      }
+
       const updated = await res.json();
 
       setMyLessons((prev) =>
