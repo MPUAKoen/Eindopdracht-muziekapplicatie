@@ -4,6 +4,9 @@ import { useUser } from '../Context/UserContext';
 import DatePicker from 'react-datepicker';
 import { format } from 'date-fns';
 import { API_BASE, getAuthAxiosConfig } from '../lib/auth';
+import Button from './ui/Button';
+import FormField from './ui/FormField';
+import Select from './ui/Select';
 import 'react-datepicker/dist/react-datepicker.css';
 import '../App.css';
 
@@ -17,6 +20,71 @@ const normalizedTime = (date) => {
   const normalized = new Date(date);
   normalized.setSeconds(0, 0);
   return normalized;
+};
+
+const minutesFromTime = (time) => {
+  if (!time) return null;
+
+  if (time instanceof Date) {
+    return time.getHours() * 60 + time.getMinutes();
+  }
+
+  const [hours, minutes] = String(time).split(':').map(Number);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+
+  return hours * 60 + minutes;
+};
+
+const datesMatch = (lessonDate, selectedDate) => {
+  if (!lessonDate || !selectedDate) return false;
+
+  return (
+    lessonDate === format(selectedDate, 'yyyy-MM-dd') ||
+    lessonDate === format(selectedDate, 'dd-MM-yyyy')
+  );
+};
+
+const hasLessonConflict = (lessons, selectedStudentId, selectedDate, selectedStart, selectedEnd) => {
+  const selectedStartMinutes = minutesFromTime(selectedStart);
+  const selectedEndMinutes = minutesFromTime(selectedEnd);
+
+  if (selectedStartMinutes == null || selectedEndMinutes == null) return false;
+
+  return lessons.some((lesson) => {
+    const sameStudent = String(lesson.studentId) === String(selectedStudentId);
+    const sameDate = datesMatch(lesson.lessonDate, selectedDate);
+    const lessonStart = minutesFromTime(lesson.startTime);
+    const lessonEnd = minutesFromTime(lesson.endTime);
+
+    if (!sameDate || lessonStart == null || lessonEnd == null) {
+      return false;
+    }
+
+    const overlaps = lessonStart < selectedEndMinutes && lessonEnd > selectedStartMinutes;
+    const overlapStart = Math.max(lessonStart, selectedStartMinutes);
+    const overlapEnd = Math.min(lessonEnd, selectedEndMinutes);
+
+    return overlaps && overlapEnd - overlapStart > 10 && (sameStudent || lesson.teacherId);
+  });
+};
+
+const getSchedulingErrorMessage = (err) => {
+  const responseText = JSON.stringify(err.response?.data || '').toLowerCase();
+  const errorText = `${err.message || ''} ${responseText}`.toLowerCase();
+
+  if (err.response?.status === 409 || errorText.includes('already has a lesson')) {
+    return 'This teacher or student already has a lesson at that time.';
+  }
+
+  if (err.response?.status === 400) {
+    return 'Please check the lesson details and try again.';
+  }
+
+  if (err.response?.status === 401 || err.response?.status === 403) {
+    return 'You are not allowed to schedule this lesson.';
+  }
+
+  return 'Failed to schedule lesson.';
 };
 
 const Schedule = () => {
@@ -70,6 +138,21 @@ const Schedule = () => {
     const formattedStart = format(cleanStartTime, 'HH:mm:ss');
     const formattedEnd = format(cleanEndTime, 'HH:mm:ss');
 
+    try {
+      const lessonResponse = await axios.get(
+        `${API_BASE}/api/lessons?scope=teaching`,
+        getAuthAxiosConfig()
+      );
+      const existingLessons = Array.isArray(lessonResponse.data) ? lessonResponse.data : [];
+
+      if (hasLessonConflict(existingLessons, studentId, lessonDate, cleanStartTime, cleanEndTime)) {
+        alert('This teacher or student already has a lesson at that time.');
+        return;
+      }
+    } catch (err) {
+      console.error('Lesson conflict check failed:', err.response?.data || err);
+    }
+
     const formData = new FormData();
     formData.append('instrument', instrument);
     formData.append('studentId', studentId);
@@ -80,9 +163,7 @@ const Schedule = () => {
     pdfFiles.forEach((file) => formData.append('pdfFiles', file));
 
     try {
-      await axios.post(`${API_BASE}/api/lessons`, formData, getAuthAxiosConfig({
-        headers: { 'Content-Type': 'multipart/form-data' },
-      }));
+      await axios.post(`${API_BASE}/api/lessons`, formData, getAuthAxiosConfig());
       alert('Lesson scheduled successfully!');
       setInstrument('');
       setStudentId('');
@@ -93,12 +174,8 @@ const Schedule = () => {
       setPdfFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err) {
-      console.error('Scheduling error:', err);
-      if (err.response?.status === 409) {
-        alert('This teacher or student already has a lesson at that time.');
-      } else {
-        alert('Failed to schedule lesson.');
-      }
+      console.error('Scheduling error:', err.response?.data || err);
+      alert(getSchedulingErrorMessage(err));
     }
   };
 
@@ -118,44 +195,30 @@ const Schedule = () => {
         ) : (
           <form onSubmit={handleSubmit} className="lesson-form">
             {/* Instrument */}
-            <div className="form-group">
-              <label htmlFor="instrument">Instrument</label>
-              <select
-                id="instrument"
-                value={instrument}
-                onChange={(e) => setInstrument(e.target.value)}
-                required
-              >
-                <option value="">-- Select --</option>
-                {instruments.map((ins) => (
-                  <option key={ins} value={ins}>
-                    {ins}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              id="instrument"
+              label="Instrument"
+              value={instrument}
+              onChange={(e) => setInstrument(e.target.value)}
+              options={instruments}
+              required
+            />
 
             {/* Student */}
-            <div className="form-group">
-              <label htmlFor="student">Student</label>
-              <select
-                id="student"
-                value={studentId}
-                onChange={(e) => setStudentId(e.target.value)}
-                required
-              >
-                <option value="">-- Select --</option>
-                {students.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.email})
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              id="student"
+              label="Student"
+              value={studentId}
+              onChange={(e) => setStudentId(e.target.value)}
+              options={students.map((s) => ({
+                value: s.id,
+                label: `${s.name} (${s.email})`
+              }))}
+              required
+            />
 
             {/* Calendar popup (Dutch format) */}
-            <div className="form-group">
-              <label htmlFor="date">Date</label>
+            <FormField label="Date" htmlFor="date">
               <DatePicker
                 id="date"
                 selected={lessonDate}
@@ -166,11 +229,10 @@ const Schedule = () => {
                 calendarStartDay={1}
                 required
               />
-            </div>
+            </FormField>
 
             {/* Start Time (default 09:00) */}
-            <div className="form-group">
-              <label htmlFor="startTime">Start Time</label>
+            <FormField label="Start Time" htmlFor="startTime">
               <DatePicker
                 selected={startTime}
                 onChange={(time) => setStartTime(normalizedTime(time))}
@@ -184,11 +246,10 @@ const Schedule = () => {
                 className="date-picker-input"
                 required
               />
-            </div>
+            </FormField>
 
             {/* End Time */}
-            <div className="form-group">
-              <label htmlFor="endTime">End Time</label>
+            <FormField label="End Time" htmlFor="endTime">
               <DatePicker
                 selected={endTime}
                 onChange={(time) => setEndTime(normalizedTime(time))}
@@ -202,21 +263,19 @@ const Schedule = () => {
                 className="date-picker-input"
                 required
               />
-            </div>
+            </FormField>
 
             {/* Homework */}
-            <div className="form-group">
-              <label htmlFor="homework">Homework</label>
+            <FormField label="Homework" htmlFor="homework">
               <textarea
                 id="homework"
                 value={homework}
                 onChange={(e) => setHomework(e.target.value)}
               />
-            </div>
+            </FormField>
 
             {/* File upload */}
-            <div className="form-group">
-              <label htmlFor="pdfFiles">Upload PDFs</label>
+            <FormField label="Upload PDFs" htmlFor="pdfFiles">
               <input
                 type="file"
                 id="pdfFiles"
@@ -225,11 +284,11 @@ const Schedule = () => {
                 onChange={(e) => setPdfFiles(Array.from(e.target.files))}
                 ref={fileInputRef}
               />
-            </div>
+            </FormField>
 
-            <button type="submit" className="submit-btn">
+            <Button type="submit" className="submit-btn">
               Add Lesson
-            </button>
+            </Button>
           </form>
         )}
       </div>

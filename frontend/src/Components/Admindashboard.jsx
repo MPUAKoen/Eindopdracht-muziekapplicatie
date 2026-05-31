@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useUser } from '../Context/UserContext';
 import { API_BASE, authFetch } from '../lib/auth';
+import Button from './ui/Button';
+import Input from './ui/Input';
+import Pagination from './ui/Pagination';
 import '../App.css';
 
 const ITEMS_PER_PAGE = 5;
@@ -128,25 +131,26 @@ const Admindashboard = () => {
 
         <div className="admin-toolbar">
           <div className="search-bar">
-            <input
+            <Input
+              id="admin-user-search"
               type="text"
-              placeholder="Search by name or email..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setCurrentPage(1);
               }}
+              placeholder="Search by name or email..."
             />
           </div>
 
-          <button
+          <Button
             className="refresh-btn"
             type="button"
             onClick={() => fetchUsers({ showRefresh: true })}
             disabled={refreshing || actionInProgress}
           >
             {refreshing ? 'Refreshing...' : 'Refresh'}
-          </button>
+          </Button>
         </div>
 
         <div className="table-container">
@@ -171,7 +175,7 @@ const Admindashboard = () => {
                     <td>{u.role}</td>
                     <td>
                       <div className="action-buttons">
-                        <button
+                        <Button
                           className="action-btn role-btn"
                           disabled={actionInProgress}
                           onClick={() => toggleUserRole(u.id)}
@@ -179,14 +183,14 @@ const Admindashboard = () => {
                           {u.role === 'TEACHER'
                             ? 'Demote to Student'
                             : 'Promote to Teacher'}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           className="action-btn delete-btn"
                           disabled={actionInProgress}
                           onClick={() => deleteUser(u.id)}
                         >
                           Delete
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -201,23 +205,11 @@ const Admindashboard = () => {
             </tbody>
           </table>
 
-          <div className="pagination">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
-            >
-              Previous
-            </button>
-            <span>
-              Page {currentPage} of {totalPages || 1}
-            </span>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-              disabled={currentPage === totalPages || totalPages === 0}
-            >
-              Next
-            </button>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
     </div>

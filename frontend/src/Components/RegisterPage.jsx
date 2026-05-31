@@ -3,7 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import { useUser } from '../Context/UserContext';
 import axios from 'axios';
 import { API_BASE } from '../lib/auth';
+import Button from './ui/Button';
+import Input from './ui/Input';
+import Select from './ui/Select';
 import '../App.css';
+
+const INSTRUMENT_OPTIONS = [
+    'Not sure',
+    'Piano',
+    'Guitar',
+    'Violin',
+    'Drums',
+    'Flute',
+    'Saxophone',
+    'Classical Singing',
+    'Bassoon',
+    'Cello',
+    'Trumpet',
+    'Clarinet',
+    'Harp',
+    'Timpani',
+    'French Horn',
+    'Tuba'
+];
 
 const RegisterPage = () => {
     const [name, setName] = useState('');
@@ -69,72 +91,55 @@ const RegisterPage = () => {
                     <div className="form-group">
                         <div className="formTitle">Create an account</div>
 
-                        <label htmlFor="name">Name</label>
-                        <input
-                            type="text"
+                        <Input
                             id="name"
+                            label="Name"
                             value={name}
                             onChange={handleNameChange}
                             placeholder="Enter your name"
                             required
                         />
 
-                        <label htmlFor="email">Email</label>
-                        <input
-                            type="email"
+                        <Input
                             id="email"
+                            label="Email"
+                            type="email"
                             value={email}
                             onChange={handleEmailChange}
                             placeholder="Enter your email"
                             required
                         />
 
-                        <label htmlFor="password">Password</label>
-                        <input
-                            type="password"
+                        <Input
                             id="password"
+                            label="Password"
+                            type="password"
                             value={password}
                             onChange={handlePasswordChange}
                             placeholder="Enter your password"
                             required
                         />
 
-                        <label htmlFor="confirmPassword">Confirm Password</label>
-                        <input
-                            type="password"
+                        <Input
                             id="confirmPassword"
+                            label="Confirm Password"
+                            type="password"
                             value={confirmPassword}
                             onChange={handleConfirmPasswordChange}
                             placeholder="Confirm your password"
                             required
                         />
 
-                        <label htmlFor="instrument">Instrument</label>
-                        <select
+                        <Select
                             id="instrument"
+                            label="Instrument"
                             value={instrument}
                             onChange={handleInstrumentChange}
-                        >
-                            <option value="">Select Instrument</option>
-                            <option value="Not sure">Not sure</option>
-                            <option value="Piano">Piano</option>
-                            <option value="Guitar">Guitar</option>
-                            <option value="Violin">Violin</option>
-                            <option value="Drums">Drums</option>
-                            <option value="Flute">Flute</option>
-                            <option value="Saxophone">Saxophone</option>
-                            <option value="Classical Singing">Classical Singing</option>
-                            <option value="Bassoon">Bassoon</option>
-                            <option value="Cello">Cello</option>
-                            <option value="Trumpet">Trumpet</option>
-                            <option value="Clarinet">Clarinet</option>
-                            <option value="Harp">Harp</option>
-                            <option value="Timpani">Timpani</option>
-                            <option value="French Horn">French Horn</option>
-                            <option value="Tuba">Tuba</option>
-                        </select>
+                            options={INSTRUMENT_OPTIONS}
+                            placeholder="Select Instrument"
+                        />
 
-                        <button type="submit" className="submit-btn">Register</button>
+                        <Button type="submit" className="submit-btn">Register</Button>
                     </div>
                 </form>
 

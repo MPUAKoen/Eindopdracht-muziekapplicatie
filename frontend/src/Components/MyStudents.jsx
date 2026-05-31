@@ -4,6 +4,9 @@ import { useUser } from '../Context/UserContext';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE, getAuthAxiosConfig } from '../lib/auth';
+import Button from './ui/Button';
+import Input from './ui/Input';
+import StatusMessage from './ui/StatusMessage';
 import '../App.css';
 
 const MyStudents = () => {
@@ -75,16 +78,17 @@ const MyStudents = () => {
         ) : (
           <>
             <div className="search-bar">
-              <input
+              <Input
+                id="student-search"
                 type="text"
-                placeholder="Search by name, email, or instrument…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by name, email, or instrument…"
                 aria-label="Filter students"
               />
             </div>
 
-            {error && <p>{error}</p>}
+            <StatusMessage message={error} type="error" />
 
             {students.length === 0 ? (
               <p>You currently have no students assigned.</p>
@@ -111,14 +115,14 @@ const MyStudents = () => {
                         <td >{s.email}</td>
                         <td>{s.instrument || '—'}</td>
                         <td>
-                          <button
+                          <Button
                             onClick={(e) => {
                               e.stopPropagation(); // prevent navigation
                               handleUnassign(s.id);
                             }}
                           >
                             Unassign
-                          </button>
+                          </Button>
                         </td>
                       </tr>
                     ))

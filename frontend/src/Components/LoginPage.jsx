@@ -3,6 +3,9 @@ import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { useUser } from '../Context/UserContext';
 import { API_BASE } from '../lib/auth';
+import Button from './ui/Button';
+import Input from './ui/Input';
+import StatusMessage from './ui/StatusMessage';
 import '../App.css';
 
 const LoginPage = () => {
@@ -64,37 +67,33 @@ const LoginPage = () => {
           <div className="form-group">
             <div className="formTitle">Log in to your account</div>
 
-            {error && <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
+            <StatusMessage message={error} type="error" />
 
-            <div className="form-group">
-              <label htmlFor="email">Email</label>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                required
-                disabled={isLoading}
-              />
-            </div>
+            <Input
+              id="email"
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              required
+              disabled={isLoading}
+            />
 
-            <div className="form-group">
-              <label htmlFor="password">Password</label>
-              <input
-                type="password"
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-                disabled={isLoading}
-              />
-            </div>
+            <Input
+              id="password"
+              label="Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              required
+              disabled={isLoading}
+            />
 
-            <button type="submit" className="submit-btn" disabled={isLoading}>
+            <Button type="submit" className="submit-btn" disabled={isLoading}>
               {isLoading ? 'Logging in...' : 'Login'}
-            </button>
+            </Button>
 
             <div
               className="redirect-link"
